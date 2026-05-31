@@ -1,0 +1,30 @@
+# Brainstorming companion artifacts
+.superpowers/
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+
+# Build artifacts
+*.tsbuildinfo
+
+# Env / secrets — NEVER commit
+.env
+.env.local
+.env*.local
+keys.txt
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel
+.env*

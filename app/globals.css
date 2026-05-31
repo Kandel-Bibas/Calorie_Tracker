@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand — neutral defaults */
+  --color-spark-orange: #FF6B35;
+  --color-spark-yellow: #FFB627;
+  --color-ring-red: #FF3B30;
+  --color-accent-blue: #007AFF;
+  --color-success-green: #34C759;
+
+  /* iOS Clean surface palette — light defaults */
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F2F2F7;
+  --color-surface-border: #E5E5EA;
+  --color-text-primary: #1C1C1E;
+  --color-text-secondary: #8E8E93;
+  --color-text-tertiary: #C7C7CC;
+
+  /* Flame palette — swapped to blue in dark mode */
+  --color-flame-outer: #FF6B35;
+  --color-flame-inner: #FFB627;
+
+  /* Type */
+  --font-display: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+}
+
+/* ===== Dark mode (manual toggle via <html class="dark">) ===== */
+html.dark {
+  --color-surface: #0B0B0D;
+  --color-surface-muted: #1C1C1E;
+  --color-surface-border: #3A3A3C;
+  --color-text-primary: #F2F2F7;
+  --color-text-secondary: #B5B5BA;
+  --color-text-tertiary: #8E8E93;
+
+  /* Cooler accents that read well on dark backgrounds */
+  --color-spark-orange: #60A5FA; /* blue-400 */
+  --color-spark-yellow: #67E8F9; /* cyan-300 */
+  --color-ring-red: #FF6B6B;     /* softer red */
+  --color-accent-blue: #60A5FA;
+
+  /* Flame becomes blue */
+  --color-flame-outer: #3B82F6;  /* blue-500 */
+  --color-flame-inner: #60A5FA;  /* blue-400 */
+}
+
+@layer base {
+  html, body {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: var(--font-display);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Disable text inflation on iOS */
+  html { -webkit-text-size-adjust: 100%; }
+
+  /* Safe-area handling when installed as PWA on iPhone */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
