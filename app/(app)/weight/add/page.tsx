@@ -94,7 +94,7 @@ export default function AddWeightPage() {
                 onClick={() => setUnit("lb")}
                 className={
                   unit === "lb"
-                    ? "rounded-md bg-[var(--color-text-primary)] px-3 text-sm font-medium text-white"
+                    ? "rounded-md bg-[var(--color-text-primary)] px-3 text-sm font-medium text-[color:var(--color-surface)]"
                     : "px-3 text-sm font-medium text-[var(--color-text-secondary)]"
                 }
               >
@@ -105,7 +105,7 @@ export default function AddWeightPage() {
                 onClick={() => setUnit("kg")}
                 className={
                   unit === "kg"
-                    ? "rounded-md bg-[var(--color-text-primary)] px-3 text-sm font-medium text-white"
+                    ? "rounded-md bg-[var(--color-text-primary)] px-3 text-sm font-medium text-[color:var(--color-surface)]"
                     : "px-3 text-sm font-medium text-[var(--color-text-secondary)]"
                 }
               >

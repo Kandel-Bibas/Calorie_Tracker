@@ -142,7 +142,7 @@ export default function OnboardingAboutPage() {
               className={cn(
                 "px-4 py-2 rounded-full text-[13px] font-semibold transition-colors",
                 isSelected
-                  ? "bg-[var(--color-text-primary)] text-white"
+                  ? "bg-[var(--color-text-primary)] text-[color:var(--color-surface)]"
                   : "bg-[var(--color-surface-muted)] text-[var(--color-text-primary)]",
               )}
             >
@@ -271,7 +271,7 @@ function UnitToggle({
       className={cn(
         "px-2.5 py-1 rounded-full transition-colors",
         active
-          ? "bg-[var(--color-text-primary)] text-white"
+          ? "bg-[var(--color-text-primary)] text-[color:var(--color-surface)]"
           : "bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]",
       )}
     >

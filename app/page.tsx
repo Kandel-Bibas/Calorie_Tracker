@@ -13,7 +13,7 @@ export default function Home() {
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <Link
           href="/onboarding"
-          className="bg-[color:var(--color-text-primary)] text-white py-3 rounded-2xl font-semibold"
+          className="bg-[color:var(--color-text-primary)] text-[color:var(--color-surface)] py-3 rounded-2xl font-semibold"
         >
           Get started
         </Link>

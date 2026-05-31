@@ -1,0 +1,67 @@
+<!--
+  Supabase Auth — CODE-ONLY sign-in email (Calorie Tracker)
+
+  WHERE TO PASTE:
+    Supabase Dashboard → Authentication → Emails → Templates → "Magic Link"
+    - Subject:  Your Calorie Tracker sign-in code
+    - Body:     paste the HTML below
+
+  CODE-ONLY: this template renders ONLY {{ .Token }} (the 6-10 digit OTP).
+  The magic link {{ .ConfirmationURL }} is intentionally OMITTED — users sign
+  in exclusively by typing the code at /login (verifyOtp, type:"email").
+  Matches app/(public)/login/page.tsx, which sends signInWithOtp() with no
+  emailRedirectTo.
+
+  This app uses signInWithOtp() for every sign-in (new + returning), so the
+  "Magic Link" template is the one that gets sent. If you later enable
+  email/password signups, paste the same body into "Confirm signup" too.
+-->
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+       style="background:#F2F2F7;margin:0;padding:32px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+             style="max-width:440px;background:#FFFFFF;border-radius:20px;overflow:hidden;border:1px solid #E5E5EA;">
+        <!-- Header -->
+        <tr>
+          <td align="center" style="padding:32px 32px 4px 32px;">
+            <div style="font-size:40px;line-height:1;">&#128293;</div>
+            <h1 style="margin:16px 0 4px 0;font-size:22px;font-weight:800;color:#1C1C1E;letter-spacing:-0.02em;">
+              Sign in to Calorie Tracker
+            </h1>
+            <p style="margin:0;font-size:14px;color:#8E8E93;">
+              Enter this code to finish signing in.
+            </p>
+          </td>
+        </tr>
+
+        <!-- One-time code -->
+        <tr>
+          <td align="center" style="padding:24px 32px 8px 32px;">
+            <div style="display:inline-block;background:#F2F2F7;border-radius:14px;padding:18px 28px;
+                        font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+                        font-size:34px;font-weight:700;letter-spacing:0.3em;color:#1C1C1E;">
+              {{ .Token }}
+            </div>
+          </td>
+        </tr>
+
+        <!-- Expiry / footer -->
+        <tr>
+          <td align="center" style="padding:12px 32px 32px 32px;">
+            <p style="margin:0 0 4px 0;font-size:13px;color:#8E8E93;">
+              This code expires in 60 minutes.
+            </p>
+            <p style="margin:0;font-size:13px;color:#8E8E93;">
+              If you didn&rsquo;t request this, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:16px 0 0 0;font-size:12px;color:#C7C7CC;">
+        Calorie Tracker
+      </p>
+    </td>
+  </tr>
+</table>

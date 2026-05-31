@@ -85,7 +85,7 @@ export default function OnboardingGoalPage() {
               className={cn(
                 "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left font-semibold text-sm transition-colors duration-150",
                 isSelected
-                  ? "bg-[var(--color-text-primary)] text-white"
+                  ? "bg-[var(--color-text-primary)] text-[color:var(--color-surface)]"
                   : "bg-[var(--color-surface-muted)] text-[var(--color-text-primary)]",
               )}
             >

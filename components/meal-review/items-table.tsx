@@ -203,7 +203,7 @@ export function ItemsTable({
               onClick={() => setMealType(mt)}
               className={
                 mt === mealType
-                  ? "rounded-full bg-[var(--color-text-primary)] px-3 py-1 text-xs font-medium text-white"
+                  ? "rounded-full bg-[var(--color-text-primary)] px-3 py-1 text-xs font-medium text-[color:var(--color-surface)]"
                   : "rounded-full border border-[var(--color-surface-border)] bg-[var(--color-surface)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
               }
             >

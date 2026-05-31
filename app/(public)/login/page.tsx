@@ -12,16 +12,15 @@ import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Email sign-in with TWO paths:
+ * Email sign-in, CODE-ONLY (no magic link):
  *
- *   1. Tap the magic link in the email (PKCE flow via /auth/callback).
- *   2. Type the 6-digit code from the email here (verifyOtp). Resilient
- *      to cross-context cookie loss, which the link path can hit when
- *      opening from iOS Mail.
+ *   1. Enter email -> Supabase emails a one-time code (signInWithOtp).
+ *   2. Type the code here -> verifyOtp({ type: "email" }) -> session.
  *
- * After either succeeds, we navigate to `?next=` (default /today). The
- * Supabase email template must include `{{ .Token }}` for the code path
- * to work — that change happens in the dashboard, not in this file.
+ * The Supabase email template deliberately renders ONLY `{{ .Token }}` (the
+ * magic-link `{{ .ConfirmationURL }}` is omitted) — see
+ * docs/supabase/auth-email-login-code.html. On success we navigate to
+ * `?next=` (default /today).
  *
  * useSearchParams forces dynamic rendering, so the inner content is wrapped
  * in <Suspense> to satisfy Next.js's prerender constraints.
@@ -70,13 +69,13 @@ function LoginInner() {
     setPending(true);
     try {
       const supabase = createClient();
+      // Code-only: no emailRedirectTo, so the email carries just the OTP code
+      // (the template omits the magic link). User verifies by typing the code.
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextParam)}`,
-        },
       });
       if (error) {
+        console.error("signInWithOtp failed:", error);
         toast({
           title: "Couldn't send code",
           description: error.message,
@@ -141,27 +140,27 @@ function LoginInner() {
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
             {stage === "code"
-              ? `Check ${email} for a 6-digit code. Or tap the link in the same email.`
-              : "We'll email you a one-tap sign-in link plus a 6-digit code."}
+              ? `Check ${email} for your sign-in code.`
+              : "We'll email you a one-time sign-in code."}
           </p>
         </header>
 
         {stage === "code" ? (
           <form onSubmit={handleVerifyCode} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="code">6-digit code</Label>
+              <Label htmlFor="code">Sign-in code</Label>
               <Input
                 id="code"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="123456"
+                pattern="\d{6,10}"
+                maxLength={10}
+                placeholder="Enter code"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 disabled={pending}
-                className="text-center tracking-[0.5em] text-xl font-semibold"
+                className="text-center tracking-[0.3em] text-xl font-semibold"
                 autoFocus
               />
             </div>

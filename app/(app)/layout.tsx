@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCachedProfile, getCachedStreak } from "@/lib/cached";
 import { userToday } from "@/lib/dates";
 import { TabBar } from "@/components/tab-bar";
-import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { OnboardingClaim } from "@/components/onboarding-claim/onboarding-claim";
 import { ThemeToggle } from "@/components/theme-toggle/theme-toggle";
 
@@ -43,7 +42,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
   );
 
   return (
-    <ToastProvider>
+    <>
       <div className="min-h-screen bg-[var(--color-surface-muted)] lg:pl-20">
         <header
           className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--color-surface-border)] bg-[var(--color-surface)]/95 px-4 py-3 backdrop-blur lg:px-8"
@@ -65,9 +64,8 @@ export default async function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
       <TabBar />
-      <ToastViewport />
       {/* Apply any localStorage onboarding draft to the DB on first load. */}
       <OnboardingClaim userId={user.id} />
-    </ToastProvider>
+    </>
   );
 }
