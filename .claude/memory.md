@@ -2,6 +2,13 @@
 <!-- max 30 entries · prune oldest when at cap · merge duplicates -->
 
 ## ENTRIES
+[id:20260531-4] [mode:LOOP] [tags:goals,calories,tdee,settings,schema]
+outcome:PASS | "Calories/day broken" = (a) Settings only had a manual kcal box that never recomputed and copied stale macros, and (b) mifflinStJeor hardcoded sedentary ×1.2 so numbers read low. Fix: lib/goals.ts ACTIVITY_FACTORS map + mifflinStJeor accepts optional `activity` (default sedentary = backward compatible, goals.test stays green); profiles.activity_level column; Settings "Daily target" replaced with a full Goal editor (intent + goal weight + pace + activity → auto-recompute via updateGoal, optional manual kcal override). updateGoal (not the old direct insert) recomputes macros AND busts the activeGoal cache tag — the old updateTargetAction did neither. Weight goal (target_weight_kg) now editable here too. | rule:when a Settings form inserts a goal directly it skips updateGoal's macro recompute + updateTag(activeGoal) cache bust → stale /today; always route goal writes through updateGoal. Added activity_level to live DB via idempotent ALTER (apply.ts is CREATE-only, won't add columns to existing tables).
+
+
+[id:20260531-3] [mode:PIPELINE] [tags:withings,water,weight,schema,drizzle,supabase]
+outcome:PASS | Ripped out Withings + activity/workouts entirely (3 api routes, lib/withings, actions/withings, withings-section, db debug/migrate scripts, /activity page; dropped integrations/daily_activity/workouts tables). Added water logging: water_logs table, actions/water.ts (addWater/undoLastWater, tz day-range sum), components/water-card on /today, profiles.units_volume + water_goal_ml, settings controls. Weight enhanced: /weight promoted to tab (tab-bar Activity→Weight/Scale icon), WeightChart gained goal ReferenceLine + padded yDomain + "to goal" delta. Regenerated clean baseline 0000_baseline.sql. tsc clean; 63 pass / 2 pre-existing gemini.test failures unrelated. | rule:regenerating a drizzle baseline needs meta/_journal.json present ({"version":"7","dialect":"postgresql","entries":[]}) or `drizzle-kit generate` ENOENTs; tsconfig has noUncheckedIndexedAccess → arr[i] is T|undefined, guard with `?? fallback`; /today ring no longer subtracts exercise kcal (no activity source) = consumed vs target.
+
 [id:20260522-1] [mode:PIPELINE] [tags:nextjs16,proxy,build]
 outcome:PASS | Phase 7 UI components added (spark, ring, tab-bar, progress-dots, ui primitives); pre-existing proxy.ts uses Next.js 15 `middleware` export and breaks `pnpm build` until renamed to `proxy` | rule:Next.js 16 requires `proxy.ts` to export a function named `proxy` (or default) — `middleware` is no longer recognized
 

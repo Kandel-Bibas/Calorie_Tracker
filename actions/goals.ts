@@ -65,7 +65,6 @@ export async function updateGoal(input: Goal): Promise<{ goalId: string }> {
         protein_g: macros.protein_g,
         carb_g: macros.carb_g,
         fat_g: macros.fat_g,
-        reminder_time: parsed.reminder_time ?? null,
       })
       .returning({ id: goals.id });
     if (!row) throw new Error("insert goal failed");

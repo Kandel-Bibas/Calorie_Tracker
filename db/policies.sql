@@ -39,6 +39,13 @@ CREATE POLICY "users access own weights"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+ALTER TABLE water_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users access own water" ON water_logs;
+CREATE POLICY "users access own water"
+  ON water_logs FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 ALTER TABLE streaks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "users access own streak" ON streaks;
 CREATE POLICY "users access own streak"

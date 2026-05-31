@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Calendar, Camera, Home, User } from "lucide-react";
+import { Scale, Calendar, Camera, Home, User } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 
@@ -19,7 +19,7 @@ const TABS: readonly TabItem[] = [
   { href: "/today", label: "Today", icon: Home },
   { href: "/history", label: "History", icon: Calendar },
   { href: "/log", label: "Log", icon: Camera, raised: true },
-  { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/weight", label: "Weight", icon: Scale },
   { href: "/settings", label: "Me", icon: User },
 ];
 

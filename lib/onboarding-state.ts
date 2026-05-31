@@ -24,8 +24,6 @@ export interface OnboardingState {
   pace?: "easy" | "steady" | "aggressive";
   /** User-editable override on the Plan screen. If unset, recompute from inputs. */
   daily_kcal?: number;
-  /** "HH:MM" 24h, or null/undefined to skip reminders. */
-  reminder_time?: string | null;
   timezone?: string;
   units_weight?: "lb" | "kg";
   units_height?: "ft" | "cm";

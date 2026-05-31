@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { and, asc, eq, gte, lt } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Droplets } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getDb } from "@/lib/db";
-import { goals, meals, profiles } from "@/db/schema";
+import { goals, meals, profiles, waterLogs } from "@/db/schema";
 import { userDayRangeUtc } from "@/lib/dates";
 import { getSignedPhotoUrl } from "@/lib/storage";
 import { DailyRing } from "@/components/ring";
@@ -17,6 +17,16 @@ interface PageProps {
 }
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ML_PER_OZ = 29.5735;
+
+function formatWater(ml: number, unit: "ml" | "oz"): string {
+  if (unit === "oz") return `${Math.round(ml / ML_PER_OZ)} oz`;
+  if (ml >= 1000) {
+    const l = ml / 1000;
+    return `${Number.isInteger(l) ? l : l.toFixed(1)} L`;
+  }
+  return `${ml} ml`;
+}
 
 export default async function HistoryDatePage({ params }: PageProps) {
   const { date } = await params;
@@ -36,12 +46,12 @@ export default async function HistoryDatePage({ params }: PageProps) {
 
   const profileRow = await db.query.profiles.findFirst({
     where: eq(profiles.id, user.id),
-    columns: { timezone: true },
+    columns: { timezone: true, water_goal_ml: true, units_volume: true },
   });
   const tz = profileRow?.timezone ?? "America/Los_Angeles";
   const { start: dayStart, end: dayEnd } = userDayRangeUtc(tz, date);
 
-  const [goalRow, mealRows] = await Promise.all([
+  const [goalRow, mealRows, waterRows] = await Promise.all([
     db.query.goals.findFirst({
       where: eq(goals.user_id, user.id),
       orderBy: (g, { desc }) => [desc(g.activated_at)],
@@ -53,6 +63,14 @@ export default async function HistoryDatePage({ params }: PageProps) {
         lt(meals.consumed_at, dayEnd),
       ),
       orderBy: [asc(meals.consumed_at)],
+    }),
+    db.query.waterLogs.findMany({
+      where: and(
+        eq(waterLogs.user_id, user.id),
+        gte(waterLogs.logged_at, dayStart),
+        lt(waterLogs.logged_at, dayEnd),
+      ),
+      columns: { amount_ml: true },
     }),
   ]);
 
@@ -113,6 +131,12 @@ export default async function HistoryDatePage({ params }: PageProps) {
   const totalKcal = cards.reduce((a, c) => a + c.total_kcal, 0);
   const target = goalRow?.daily_kcal ?? 2000;
 
+  const waterMl = waterRows.reduce((a, r) => a + (r.amount_ml ?? 0), 0);
+  const waterGoalMl = profileRow?.water_goal_ml ?? 2000;
+  const waterUnit: "ml" | "oz" = profileRow?.units_volume === "oz" ? "oz" : "ml";
+  const waterPct =
+    waterGoalMl > 0 ? Math.min(100, Math.round((waterMl / waterGoalMl) * 100)) : 0;
+
   const label = new Date(date + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "long",
     month: "short",
@@ -144,6 +168,27 @@ export default async function HistoryDatePage({ params }: PageProps) {
           target={target}
           size={200}
         />
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-2xl bg-[var(--color-surface)] p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+            <Droplets className="h-4 w-4 text-[var(--color-accent-blue)]" />
+            Water
+          </h2>
+          <span className="text-sm font-semibold tabular-nums text-[var(--color-text-primary)]">
+            {formatWater(waterMl, waterUnit)}
+            <span className="text-[var(--color-text-secondary)]">
+              {" "}/ {formatWater(waterGoalMl, waterUnit)}
+            </span>
+          </span>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-muted)]">
+          <div
+            className="h-full rounded-full bg-[var(--color-accent-blue)]"
+            style={{ width: `${waterPct}%` }}
+          />
+        </div>
       </section>
 
       {cards.length === 0 ? (

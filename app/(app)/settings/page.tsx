@@ -1,15 +1,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { ChevronRight, LogOut } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getDb } from "@/lib/db";
-import { profiles, goals, integrations } from "@/db/schema";
+import { profiles, goals, weights } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { WithingsSection } from "@/components/withings-section/withings-section";
+import { updateGoal } from "@/actions/goals";
+import { mifflinStJeor, applyPaceAdjustment, type ActivityLevel } from "@/lib/goals";
+import type { Goal, Intent, Pace } from "@/schemas/goal";
+import { SettingsNotices } from "@/components/settings-notices/settings-notices";
+
+const SELECT_CLS =
+  "flex h-11 w-full rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)] px-3 text-base";
+const INTENTS = ["lose", "maintain", "gain", "track"] as const;
+const PACES = ["easy", "steady", "aggressive"] as const;
+const ACTIVITIES = [
+  "sedentary",
+  "light",
+  "moderate",
+  "active",
+  "very_active",
+] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -110,10 +125,15 @@ async function updateProfileAction(formData: FormData) {
   const heightStr = formData.get("height_cm") as string | null;
   const units_weight = (formData.get("units_weight") as string | null) ?? "lb";
   const units_height = (formData.get("units_height") as string | null) ?? "ft";
+  const units_volume = (formData.get("units_volume") as string | null) ?? "ml";
   const timezone = (formData.get("timezone") as string | null) ?? "America/Los_Angeles";
 
   const birth_year = birthYearStr ? Number(birthYearStr) : null;
   const height_cm = heightStr ? Number(heightStr) : null;
+  const waterGoalStr = formData.get("water_goal_ml") as string | null;
+  const water_goal_ml = waterGoalStr
+    ? Math.max(250, Math.min(6000, Math.round(Number(waterGoalStr))))
+    : 2000;
 
   const db = getDb();
   await db
@@ -126,6 +146,8 @@ async function updateProfileAction(formData: FormData) {
       height_cm,
       units_weight,
       units_height,
+      units_volume,
+      water_goal_ml,
       timezone,
     })
     .onConflictDoUpdate({
@@ -137,6 +159,8 @@ async function updateProfileAction(formData: FormData) {
         height_cm,
         units_weight,
         units_height,
+        units_volume,
+        water_goal_ml,
         timezone,
       },
     });
@@ -144,53 +168,104 @@ async function updateProfileAction(formData: FormData) {
   redirect("/settings");
 }
 
-async function updateTargetAction(formData: FormData) {
+async function updateGoalAction(formData: FormData) {
   "use server";
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("unauthorized");
-
-  const daily_kcal = Number(formData.get("daily_kcal"));
-  if (!Number.isFinite(daily_kcal) || daily_kcal < 800 || daily_kcal > 6000) {
-    throw new Error("daily_kcal out of range");
-  }
-  const reminder_time =
-    ((formData.get("reminder_time") as string | null) ?? "").match(/^\d{2}:\d{2}$/)
-      ? (formData.get("reminder_time") as string)
-      : null;
-
   const db = getDb();
-  // Mark existing active goal as superseded and insert a new one with the
-  // updated target. Keep intent/pace/macros from the prior goal.
-  const active = await db.query.goals.findFirst({
-    where: and(eq(goals.user_id, user.id), isNull(goals.superseded_at)),
-  });
-  await db.transaction(async (tx) => {
-    if (active) {
-      await tx
-        .update(goals)
-        .set({ superseded_at: new Date() })
-        .where(eq(goals.id, active.id));
-    }
-    await tx.insert(goals).values({
-      user_id: user.id,
-      intent: active?.intent ?? "track",
-      target_weight_kg: active?.target_weight_kg ?? null,
-      pace: active?.pace ?? null,
-      daily_kcal,
-      protein_g: active?.protein_g ?? null,
-      carb_g: active?.carb_g ?? null,
-      fat_g: active?.fat_g ?? null,
-      reminder_time,
-    });
-  });
 
-  redirect("/settings");
+  const profile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
+  });
+  const unitsWeight = profile?.units_weight === "kg" ? "kg" : "lb";
+
+  const intentRaw = String(formData.get("intent") ?? "maintain");
+  const intent: Intent = (INTENTS as readonly string[]).includes(intentRaw)
+    ? (intentRaw as Intent)
+    : "maintain";
+  const paceRaw = String(formData.get("pace") ?? "steady");
+  const pace: Pace = (PACES as readonly string[]).includes(paceRaw)
+    ? (paceRaw as Pace)
+    : "steady";
+  const activityRaw = String(formData.get("activity_level") ?? "sedentary");
+  const activity: ActivityLevel = (ACTIVITIES as readonly string[]).includes(activityRaw)
+    ? (activityRaw as ActivityLevel)
+    : "sedentary";
+
+  // Goal weight (entered in display units) → kg. Optional.
+  let target_weight_kg: number | undefined;
+  const gwRaw = formData.get("goal_weight");
+  if (typeof gwRaw === "string" && gwRaw.trim()) {
+    const gw = Number(gwRaw);
+    if (Number.isFinite(gw) && gw > 0) {
+      const kg = unitsWeight === "kg" ? gw : gw / 2.20462;
+      target_weight_kg = Math.max(20, Math.min(300, Math.round(kg * 100) / 100));
+    }
+  }
+
+  // Optional manual calorie override.
+  let daily_kcal: number | undefined;
+  const kcalRaw = formData.get("daily_kcal");
+  if (typeof kcalRaw === "string" && kcalRaw.trim()) {
+    const k = Number(kcalRaw);
+    if (Number.isFinite(k) && k >= 800 && k <= 6000) daily_kcal = Math.round(k);
+  }
+
+  // No override → compute from Mifflin-St Jeor × activity, then pace adjustment.
+  if (daily_kcal == null) {
+    const latest = await db.query.weights.findFirst({
+      where: eq(weights.user_id, user.id),
+      orderBy: [desc(weights.recorded_on)],
+    });
+    if (profile?.sex && profile.birth_year && profile.height_cm && latest) {
+      const age = new Date().getFullYear() - profile.birth_year;
+      const tdee = mifflinStJeor({
+        sex: profile.sex as "male" | "female" | "prefer_not",
+        age,
+        height_cm: profile.height_cm,
+        weight_kg: Number(latest.weight_kg),
+        activity,
+      });
+      daily_kcal = applyPaceAdjustment(tdee, intent, pace);
+    } else {
+      // Not enough profile/weight data to compute — keep the current target.
+      const active = await db.query.goals.findFirst({
+        where: and(eq(goals.user_id, user.id), isNull(goals.superseded_at)),
+      });
+      daily_kcal = active?.daily_kcal ?? 2000;
+    }
+  }
+
+  // Persist the chosen activity level on the profile.
+  await db.update(profiles).set({ activity_level: activity }).where(eq(profiles.id, user.id));
+
+  // Supersede the active goal and insert the new one (recomputes macros +
+  // busts the active-goal cache).
+  const goalInput: Goal = {
+    intent,
+    target_weight_kg,
+    pace: intent === "maintain" || intent === "track" ? undefined : pace,
+    daily_kcal,
+  };
+  await updateGoal(goalInput);
+
+  // If they picked a non-default pace on a maintain/track goal, pace was
+  // dropped (no maintenance-calorie adjustment) — flag it so the page can
+  // explain via a toast.
+  const paceDropped =
+    (intent === "maintain" || intent === "track") && pace !== "steady";
+  redirect(paceDropped ? "/settings?notice=pace-na" : "/settings");
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
+  const { notice } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -198,19 +273,29 @@ export default async function SettingsPage() {
   if (!user) return null;
   const db = getDb();
 
-  const [profileRow, activeGoal, withingsRow] = await Promise.all([
+  const [profileRow, activeGoal] = await Promise.all([
     db.query.profiles.findFirst({ where: eq(profiles.id, user.id) }),
     db.query.goals.findFirst({
       where: and(eq(goals.user_id, user.id), isNull(goals.superseded_at)),
       orderBy: (g, { desc }) => [desc(g.activated_at)],
     }),
-    db.query.integrations.findFirst({
-      where: and(eq(integrations.user_id, user.id), eq(integrations.provider, "withings")),
-    }),
   ]);
+
+  const weightUnit = profileRow?.units_weight === "kg" ? "kg" : "lb";
+  const goalWeightDisplay =
+    activeGoal?.target_weight_kg != null
+      ? String(
+          Math.round(
+            (weightUnit === "kg"
+              ? Number(activeGoal.target_weight_kg)
+              : Number(activeGoal.target_weight_kg) * 2.20462) * 10,
+          ) / 10,
+        )
+      : "";
 
   return (
     <div className="flex flex-col gap-6">
+      <SettingsNotices notice={notice} />
       <header className="flex flex-col gap-1">
         <p className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
           Settings
@@ -319,15 +404,100 @@ export default async function SettingsPage() {
               </select>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="units_volume">Water unit</Label>
+              <select
+                id="units_volume"
+                name="units_volume"
+                defaultValue={profileRow?.units_volume ?? "ml"}
+                className="flex h-11 w-full rounded-lg border border-[var(--color-surface-border)] bg-[var(--color-surface)] px-3 text-base"
+              >
+                <option value="ml">ml / L</option>
+                <option value="oz">fl oz</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="water_goal_ml">Daily water goal (ml)</Label>
+              <Input
+                id="water_goal_ml"
+                name="water_goal_ml"
+                type="number"
+                min={250}
+                max={6000}
+                step={50}
+                defaultValue={profileRow?.water_goal_ml ?? 2000}
+              />
+            </div>
+          </div>
           <Button type="submit">Save profile</Button>
         </form>
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl bg-[var(--color-surface)] p-5 shadow-sm">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-          Daily target
+          Goal
         </h2>
-        <form action={updateTargetAction} className="flex flex-col gap-3">
+        <form action={updateGoalAction} className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="intent">Goal</Label>
+              <select
+                id="intent"
+                name="intent"
+                defaultValue={activeGoal?.intent ?? "maintain"}
+                className={SELECT_CLS}
+              >
+                <option value="lose">Lose weight</option>
+                <option value="maintain">Maintain</option>
+                <option value="gain">Gain weight</option>
+                <option value="track">Just track</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="goal_weight">Goal weight ({weightUnit})</Label>
+              <Input
+                id="goal_weight"
+                name="goal_weight"
+                type="number"
+                step="0.1"
+                min={20}
+                max={660}
+                defaultValue={goalWeightDisplay}
+                placeholder="optional"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="pace">Pace</Label>
+              <select
+                id="pace"
+                name="pace"
+                defaultValue={activeGoal?.pace ?? "steady"}
+                className={SELECT_CLS}
+              >
+                <option value="easy">Easy</option>
+                <option value="steady">Steady</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="activity_level">Activity</Label>
+              <select
+                id="activity_level"
+                name="activity_level"
+                defaultValue={profileRow?.activity_level ?? "sedentary"}
+                className={SELECT_CLS}
+              >
+                <option value="sedentary">Sedentary</option>
+                <option value="light">Lightly active</option>
+                <option value="moderate">Moderately active</option>
+                <option value="active">Very active</option>
+                <option value="very_active">Extra active</option>
+              </select>
+            </div>
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="daily_kcal">Calories per day</Label>
             <Input
@@ -336,30 +506,18 @@ export default async function SettingsPage() {
               type="number"
               min={800}
               max={6000}
-              defaultValue={activeGoal?.daily_kcal ?? 2000}
-              required
+              placeholder={`Auto · currently ${activeGoal?.daily_kcal ?? 2000} kcal`}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reminder_time">Reminder time (HH:MM, optional)</Label>
-            <Input
-              id="reminder_time"
-              name="reminder_time"
-              type="time"
-              defaultValue={activeGoal?.reminder_time ?? ""}
-            />
+            <p className="text-xs text-[var(--color-text-tertiary)]">
+              Leave blank to auto-calculate from your goal, pace &amp; activity.
+              Enter a number to override.
+            </p>
           </div>
           <Button type="submit" variant="outline">
-            Update target
+            Update goal
           </Button>
         </form>
       </section>
-
-      <WithingsSection
-        connected={!!withingsRow}
-        externalUserId={withingsRow?.external_user_id ?? null}
-        lastSyncedAt={withingsRow?.last_synced_at ?? null}
-      />
 
       <Link
         href="/settings/goals"

@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, isNull } from "drizzle-orm";
 import { Plus } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getDb } from "@/lib/db";
-import { weights, profiles } from "@/db/schema";
+import { weights, profiles, goals } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { WeightChart, type WeightPoint } from "@/components/weight-chart/weight-chart";
 
@@ -47,6 +47,23 @@ export default async function WeightPage() {
     orderBy: [desc(weights.recorded_on)],
   });
 
+  const activeGoal = await db.query.goals.findFirst({
+    where: and(eq(goals.user_id, user.id), isNull(goals.superseded_at)),
+    orderBy: (g, { desc }) => [desc(g.activated_at)],
+    columns: { target_weight_kg: true },
+  });
+  const toDisplay = (kg: number) =>
+    unit === "kg" ? Math.round(kg * 10) / 10 : Math.round(kg * 2.20462 * 10) / 10;
+  const goalWeight =
+    activeGoal?.target_weight_kg != null
+      ? toDisplay(Number(activeGoal.target_weight_kg))
+      : null;
+  const latestDisplay = latest ? toDisplay(Number(latest.weight_kg)) : null;
+  const toGoal =
+    latestDisplay != null && goalWeight != null
+      ? Math.round((latestDisplay - goalWeight) * 10) / 10
+      : null;
+
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-end justify-between gap-4">
@@ -57,9 +74,7 @@ export default async function WeightPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
             {latest ? (
               <>
-                {unit === "kg"
-                  ? Math.round(Number(latest.weight_kg) * 10) / 10
-                  : Math.round(Number(latest.weight_kg) * 2.20462 * 10) / 10}{" "}
+                {latestDisplay}{" "}
                 <span className="text-lg font-medium text-[var(--color-text-secondary)]">
                   {unit}
                 </span>
@@ -75,6 +90,13 @@ export default async function WeightPage() {
               Last logged {latest.recorded_on}
             </p>
           ) : null}
+          {toGoal != null ? (
+            <p className="mt-0.5 text-xs font-medium text-[var(--color-accent-blue)]">
+              {Math.abs(toGoal) < 0.1
+                ? "At your goal weight 🎯"
+                : `${Math.abs(toGoal)} ${unit} ${toGoal > 0 ? "to lose" : "to gain"} · goal ${goalWeight} ${unit}`}
+            </p>
+          ) : null}
         </div>
         <Link href="/weight/add">
           <Button size="sm">
@@ -83,7 +105,7 @@ export default async function WeightPage() {
         </Link>
       </header>
 
-      <WeightChart points={points} unit={unit} />
+      <WeightChart points={points} unit={unit} goalWeight={goalWeight} />
     </div>
   );
 }

@@ -23,8 +23,8 @@ export function userToday(timezone: string): string {
  * Return the UTC instants bounding "this user-day" — i.e. midnight to
  * 23:59:59.999 wall-clock time in the user's timezone, converted to UTC.
  *
- * Use this to bound `consumed_at` queries when filtering meals/workouts
- * by date. Naive `new Date("YYYY-MM-DDT00:00:00")` would be parsed in the
+ * Use this to bound `consumed_at` / `logged_at` queries when filtering by
+ * date. Naive `new Date("YYYY-MM-DDT00:00:00")` would be parsed in the
  * SERVER's timezone (UTC on Vercel), which silently drops meals logged
  * late at night in the user's local timezone.
  */

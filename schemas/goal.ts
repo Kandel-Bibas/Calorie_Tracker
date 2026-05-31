@@ -14,10 +14,6 @@ export const GoalSchema = z.object({
   protein_g: z.number().int().min(0).max(500).optional(),
   carb_g: z.number().int().min(0).max(1000).optional(),
   fat_g: z.number().int().min(0).max(400).optional(),
-  reminder_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional(),
 });
 
 export type Goal = z.infer<typeof GoalSchema>;

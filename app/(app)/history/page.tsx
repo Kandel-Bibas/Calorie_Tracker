@@ -3,7 +3,7 @@ import { and, asc, eq, gte, lt } from "drizzle-orm";
 
 import { createClient } from "@/lib/supabase/server";
 import { getDb } from "@/lib/db";
-import { meals, profiles, goals } from "@/db/schema";
+import { meals, profiles, goals, waterLogs } from "@/db/schema";
 import { userToday } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 interface DayCell {
   date: string;
   kcal: number;
+  waterMl: number;
   inMonth: boolean;
 }
 
@@ -22,15 +23,15 @@ function getMonthGrid(year: number, monthIdx: number): DayCell[] {
   // Leading days from previous month
   for (let i = leading; i > 0; i--) {
     const d = new Date(year, monthIdx, 1 - i);
-    cells.push({ date: d.toISOString().slice(0, 10), kcal: 0, inMonth: false });
+    cells.push({ date: d.toISOString().slice(0, 10), kcal: 0, waterMl: 0, inMonth: false });
   }
   for (let d = 1; d <= last.getDate(); d++) {
     const dt = new Date(year, monthIdx, d);
-    cells.push({ date: dt.toISOString().slice(0, 10), kcal: 0, inMonth: true });
+    cells.push({ date: dt.toISOString().slice(0, 10), kcal: 0, waterMl: 0, inMonth: true });
   }
   while (cells.length % 7 !== 0) {
     const next = new Date(year, monthIdx, last.getDate() + (cells.length % 7));
-    cells.push({ date: next.toISOString().slice(0, 10), kcal: 0, inMonth: false });
+    cells.push({ date: next.toISOString().slice(0, 10), kcal: 0, waterMl: 0, inMonth: false });
   }
   return cells;
 }
@@ -45,7 +46,7 @@ export default async function HistoryPage() {
 
   const profileRow = await db.query.profiles.findFirst({
     where: eq(profiles.id, user.id),
-    columns: { timezone: true },
+    columns: { timezone: true, water_goal_ml: true },
   });
   const tz = profileRow?.timezone ?? "America/Los_Angeles";
 
@@ -87,11 +88,36 @@ export default async function HistoryPage() {
     c.kcal = Math.round(byDate.get(c.date) ?? 0);
   }
 
+  // Aggregate water (ml) per user-day for the same window.
+  const waterRows = await db
+    .select({ logged_at: waterLogs.logged_at, amount_ml: waterLogs.amount_ml })
+    .from(waterLogs)
+    .where(
+      and(
+        eq(waterLogs.user_id, user.id),
+        gte(waterLogs.logged_at, monthStart),
+        lt(waterLogs.logged_at, monthEnd),
+      ),
+    );
+  const waterByDate = new Map<string, number>();
+  for (const w of waterRows) {
+    const d =
+      w.logged_at instanceof Date
+        ? w.logged_at
+        : new Date(w.logged_at as unknown as string);
+    const iso = d.toISOString().slice(0, 10);
+    waterByDate.set(iso, (waterByDate.get(iso) ?? 0) + (w.amount_ml ?? 0));
+  }
+  for (const c of cells) {
+    c.waterMl = waterByDate.get(c.date) ?? 0;
+  }
+
   const activeGoal = await db.query.goals.findFirst({
     where: and(eq(goals.user_id, user.id)),
     orderBy: (g, { desc }) => [desc(g.activated_at)],
   });
   const target = activeGoal?.daily_kcal ?? 2000;
+  const waterGoal = profileRow?.water_goal_ml ?? 2000;
   const monthLabel = today.toLocaleString(undefined, {
     month: "long",
     year: "numeric",
@@ -121,6 +147,8 @@ export default async function HistoryPage() {
               : ratio > 1.05
                 ? "#FF9500"
                 : "#FF3B30";
+          const waterRatio = waterGoal > 0 ? Math.min(1, c.waterMl / waterGoal) : 0;
+          const hasWater = c.waterMl > 0;
           return (
             <Link
               key={c.date}
@@ -143,10 +171,14 @@ export default async function HistoryPage() {
                   }}
                 />
               ) : null}
-              {filled ? (
-                <span className="mt-0.5 text-[9px] tabular-nums text-[var(--color-text-tertiary)]">
-                  {c.kcal}
-                </span>
+              {hasWater ? (
+                <span
+                  className="mt-0.5 h-1 w-6 rounded-full"
+                  title="Water"
+                  style={{
+                    background: `linear-gradient(to right, var(--color-accent-blue) ${waterRatio * 100}%, var(--color-surface-muted) ${waterRatio * 100}%)`,
+                  }}
+                />
               ) : null}
             </Link>
           );

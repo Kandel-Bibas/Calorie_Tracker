@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -23,6 +24,8 @@ export interface WeightPoint {
 export interface WeightChartProps {
   points: WeightPoint[];
   unit: "lb" | "kg";
+  /** Optional goal weight (display units) — drawn as a reference line. */
+  goalWeight?: number | null;
   className?: string;
 }
 
@@ -52,7 +55,7 @@ function movingAvg(points: WeightPoint[], window = 7): (number | null)[] {
   return result;
 }
 
-export function WeightChart({ points, unit, className }: WeightChartProps) {
+export function WeightChart({ points, unit, goalWeight, className }: WeightChartProps) {
   const [range, setRange] = React.useState<Range>("90d");
 
   const filtered = React.useMemo(() => {
@@ -72,6 +75,15 @@ export function WeightChart({ points, unit, className }: WeightChartProps) {
       avg7: avg[i],
     }));
   }, [filtered]);
+
+  // Pad the Y domain so the goal reference line stays visible even when the
+  // goal sits outside the logged range.
+  const yDomain = React.useMemo<[number | string, number | string]>(() => {
+    const ys = data.map((d) => d.weight);
+    if (goalWeight != null) ys.push(goalWeight);
+    if (ys.length === 0) return ["dataMin - 1", "dataMax + 1"];
+    return [Math.floor(Math.min(...ys) - 1), Math.ceil(Math.max(...ys) + 1)];
+  }, [data, goalWeight]);
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -113,7 +125,7 @@ export function WeightChart({ points, unit, className }: WeightChartProps) {
               <YAxis
                 stroke="var(--color-text-secondary)"
                 fontSize={11}
-                domain={["dataMin - 1", "dataMax + 1"]}
+                domain={yDomain}
                 tickFormatter={(v: number) => `${Math.round(v)}`}
               />
               <Tooltip
@@ -145,6 +157,20 @@ export function WeightChart({ points, unit, className }: WeightChartProps) {
                 isAnimationActive={false}
                 name="7-day avg"
               />
+              {goalWeight != null ? (
+                <ReferenceLine
+                  y={goalWeight}
+                  stroke="var(--color-success-green)"
+                  strokeDasharray="5 3"
+                  strokeWidth={1.5}
+                  label={{
+                    value: `Goal ${goalWeight}`,
+                    position: "insideTopRight",
+                    fontSize: 10,
+                    fill: "var(--color-success-green)",
+                  }}
+                />
+              ) : null}
             </LineChart>
           </ResponsiveContainer>
         )}

@@ -8,7 +8,6 @@ import {
   boolean,
   timestamp,
   date,
-  time,
   jsonb,
   check,
   unique,
@@ -34,12 +33,17 @@ export const profiles = pgTable("profiles", {
   height_cm: smallint("height_cm"),
   units_weight: text("units_weight").default("lb"),
   units_height: text("units_height").default("ft"),
+  units_volume: text("units_volume").default("ml"),
+  water_goal_ml: smallint("water_goal_ml").default(2000),
+  activity_level: text("activity_level").default("sedentary"),
   timezone: text("timezone").default("America/Los_Angeles"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => ({
   sexCheck: check("profiles_sex_chk", sql`${t.sex} IN ('male','female','prefer_not')`),
   uwCheck: check("profiles_uw_chk", sql`${t.units_weight} IN ('lb','kg')`),
   uhCheck: check("profiles_uh_chk", sql`${t.units_height} IN ('ft','cm')`),
+  uvCheck: check("profiles_uv_chk", sql`${t.units_volume} IN ('ml','oz')`),
+  alCheck: check("profiles_al_chk", sql`${t.activity_level} IN ('sedentary','light','moderate','active','very_active')`),
 }));
 
 // ----- goals (versioned) -----
@@ -53,7 +57,6 @@ export const goals = pgTable("goals", {
   protein_g: smallint("protein_g"),
   carb_g: smallint("carb_g"),
   fat_g: smallint("fat_g"),
-  reminder_time: time("reminder_time"),
   activated_at: timestamp("activated_at", { withTimezone: true }).defaultNow(),
   superseded_at: timestamp("superseded_at", { withTimezone: true }),
 }, (t) => ({
@@ -119,6 +122,16 @@ export const weights = pgTable("weights", {
   oneRowPerDay: unique("weights_user_day_uniq").on(t.user_id, t.recorded_on),
 }));
 
+// ----- water_logs (one row per drink event; daily total via tz day-range) -----
+export const waterLogs = pgTable("water_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
+  logged_at: timestamp("logged_at", { withTimezone: true }).notNull().defaultNow(),
+  amount_ml: integer("amount_ml").notNull(),
+}, (t) => ({
+  byUserLogged: index("water_user_logged_idx").on(t.user_id, t.logged_at),
+}));
+
 // ----- streaks -----
 export const streaks = pgTable("streaks", {
   user_id: uuid("user_id")
@@ -173,65 +186,6 @@ export const mealDrafts = pgTable("meal_drafts", {
   expires_at: timestamp("expires_at", { withTimezone: true }).default(sql`now() + interval '90 minutes'`),
 });
 
-// ----- integrations (OAuth tokens per provider per user) -----
-export const integrations = pgTable("integrations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  user_id: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
-  provider: text("provider").notNull(),
-  external_user_id: text("external_user_id"),
-  access_token: text("access_token").notNull(),
-  refresh_token: text("refresh_token"),
-  expires_at: timestamp("expires_at", { withTimezone: true }),
-  scope: text("scope"),
-  last_synced_at: timestamp("last_synced_at", { withTimezone: true }),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-}, (t) => ({
-  providerCheck: check("integrations_provider_chk", sql`${t.provider} IN ('withings','strava','fitbit','whoop','garmin')`),
-  uniqUserProvider: unique("integrations_user_provider_uniq").on(t.user_id, t.provider),
-}));
-
-// ----- daily_activity (steps + calories burned per user per day) -----
-export const dailyActivity = pgTable("daily_activity", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  user_id: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
-  date: date("date").notNull(),
-  source: text("source").notNull(),
-  steps: integer("steps"),
-  active_kcal: integer("active_kcal"),
-  total_kcal: integer("total_kcal"),
-  distance_m: integer("distance_m"),
-  active_minutes: integer("active_minutes"),
-  resting_hr: smallint("resting_hr"),
-  raw: jsonb("raw"),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-}, (t) => ({
-  uniqDayPerUser: unique("daily_activity_user_date_uniq").on(t.user_id, t.date, t.source),
-  bySourceCheck: check("daily_activity_source_chk", sql`${t.source} IN ('withings','strava','fitbit','whoop','garmin','manual')`),
-}));
-
-// ----- workouts (individual sessions from Withings/Strava/etc.) -----
-export const workouts = pgTable("workouts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  user_id: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
-  source: text("source").notNull(),
-  external_id: text("external_id"),
-  started_at: timestamp("started_at", { withTimezone: true }).notNull(),
-  ended_at: timestamp("ended_at", { withTimezone: true }),
-  category: smallint("category"),
-  category_label: text("category_label"),
-  active_kcal: integer("active_kcal"),
-  distance_m: integer("distance_m"),
-  duration_s: integer("duration_s"),
-  avg_hr: smallint("avg_hr"),
-  max_hr: smallint("max_hr"),
-  raw: jsonb("raw"),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-}, (t) => ({
-  uniqExternal: unique("workouts_source_extid_uniq").on(t.user_id, t.source, t.external_id),
-  byUserStart: index("workouts_user_start_idx").on(t.user_id, t.started_at),
-  sourceCheck: check("workouts_source_chk", sql`${t.source} IN ('withings','strava','fitbit','whoop','garmin','manual')`),
-}));
-
 // ----- ai_calls (observability) -----
 export const aiCalls = pgTable("ai_calls", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -256,6 +210,8 @@ export type NewMealItem = typeof mealItems.$inferInsert;
 export type GoalRow = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
 export type Weight = typeof weights.$inferSelect;
+export type WaterLog = typeof waterLogs.$inferSelect;
+export type NewWaterLog = typeof waterLogs.$inferInsert;
 export type Streak = typeof streaks.$inferSelect;
 export type FoodCacheRow = typeof foodCache.$inferSelect;
 export type UserFoodOverride = typeof userFoodOverrides.$inferSelect;

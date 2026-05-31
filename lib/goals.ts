@@ -1,7 +1,22 @@
 import type { Sex } from "@/schemas/profile";
 import type { Intent, Pace } from "@/schemas/goal";
 
-const ACTIVITY_FACTOR = 1.2; // sedentary; can be overridden in settings later
+export type ActivityLevel =
+  | "sedentary"
+  | "light"
+  | "moderate"
+  | "active"
+  | "very_active";
+
+/** TDEE multipliers applied to BMR (standard Mifflin-St Jeor activity factors). */
+export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
 const MIN_KCAL_FLOOR = 1200;
 const KCAL_PER_KG_BODY_MASS = 7700;
 
@@ -18,19 +33,20 @@ const PACE_DELTA: Record<Pace, number> = {
 };
 
 /**
- * Mifflin-St Jeor BMR × sedentary activity factor.
- * Reference for "male, 28y, 178cm, 78kg" → ~1742 (BMR) × 1.2 ≈ 2090.
- * For tests we return the BMR×activity rounded.
+ * Mifflin-St Jeor BMR × activity factor (TDEE).
+ * `activity` defaults to "sedentary" (1.2) — e.g. "male, 28y, 178cm, 78kg"
+ * → ~1758 BMR × 1.2 ≈ 2109. Pass a higher activity level for active users.
  */
 export function mifflinStJeor(p: {
   sex: Sex;
   age: number;
   height_cm: number;
   weight_kg: number;
+  activity?: ActivityLevel;
 }): number {
   const base = 10 * p.weight_kg + 6.25 * p.height_cm - 5 * p.age;
   const bmr = base + SEX_OFFSET[p.sex];
-  return Math.round(bmr * ACTIVITY_FACTOR);
+  return Math.round(bmr * ACTIVITY_FACTORS[p.activity ?? "sedentary"]);
 }
 
 /**

@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getDb } from "@/lib/db";
-import { goals, meals, mealItems, profiles, dailyActivity, workouts } from "@/db/schema";
+import { goals, meals, mealItems, profiles, waterLogs } from "@/db/schema";
 import { userToday, userDayRangeUtc } from "@/lib/dates";
 import { getSignedPhotoUrl } from "@/lib/storage";
 import { DailyRing } from "@/components/ring";
@@ -12,6 +12,7 @@ import { MacrosRow } from "@/components/macros-row";
 import { Spark } from "@/components/spark";
 import { Button } from "@/components/ui/button";
 import { MealCard, type MealCardData, type MealCardItem } from "@/components/meal-card";
+import { WaterCard } from "@/components/water-card/water-card";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +22,6 @@ const MEAL_ORDER: Record<string, number> = {
   dinner: 2,
   snack: 3,
 };
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-1 flex-col">
-      <span className="text-base font-semibold tabular-nums text-[var(--color-text-primary)]">
-        {value}
-      </span>
-      <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-secondary)]">
-        {label}
-      </span>
-    </div>
-  );
-}
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -49,7 +37,7 @@ export default async function TodayPage() {
 
   const profileRow = await db.query.profiles.findFirst({
     where: eq(profiles.id, userId),
-    columns: { timezone: true },
+    columns: { timezone: true, water_goal_ml: true, units_volume: true },
   });
   const tz = profileRow?.timezone ?? "America/Los_Angeles";
   const todayIso = userToday(tz);
@@ -61,7 +49,7 @@ export default async function TodayPage() {
   // which is past midnight UTC) still count as today.
   const { start: dayStart, end: dayEnd } = userDayRangeUtc(tz, todayIso);
 
-  const [goalRow, mealRows, activityRow, workoutRows] = await Promise.all([
+  const [goalRow, mealRows, waterRows] = await Promise.all([
     db.query.goals.findFirst({
       where: and(eq(goals.user_id, userId), isNull(goals.superseded_at)),
       orderBy: (g, { desc }) => [desc(g.activated_at)],
@@ -74,20 +62,13 @@ export default async function TodayPage() {
       ),
       orderBy: [asc(meals.consumed_at)],
     }),
-    db.query.dailyActivity.findFirst({
+    db.query.waterLogs.findMany({
       where: and(
-        eq(dailyActivity.user_id, userId),
-        eq(dailyActivity.date, todayIso),
-        eq(dailyActivity.source, "withings"),
+        eq(waterLogs.user_id, userId),
+        gte(waterLogs.logged_at, dayStart),
+        lt(waterLogs.logged_at, dayEnd),
       ),
-    }),
-    db.query.workouts.findMany({
-      where: and(
-        eq(workouts.user_id, userId),
-        gte(workouts.started_at, dayStart),
-        lt(workouts.started_at, dayEnd),
-      ),
-      orderBy: [asc(workouts.started_at)],
+      columns: { amount_ml: true },
     }),
   ]);
 
@@ -158,14 +139,10 @@ export default async function TodayPage() {
   const bandHigh = cards.reduce((a, c) => a + (c.error_band_high ?? c.total_kcal), 0);
   const target = goalRow?.daily_kcal ?? 2000;
 
-  // Net-calorie math (MyFitnessPal style):
-  //   Workouts get priority (they're explicit sessions); fall back to daily total
-  //   active_kcal from the Withings activity feed if no workouts are logged.
-  const workoutBurned = workoutRows.reduce((a, w) => a + (w.active_kcal ?? 0), 0);
-  const activeBurned = workoutBurned > 0
-    ? workoutBurned
-    : (activityRow?.active_kcal ?? 0);
-  const netConsumed = Math.max(0, totalKcal - activeBurned);
+  // Hydration card inputs.
+  const waterMl = waterRows.reduce((a, r) => a + (r.amount_ml ?? 0), 0);
+  const waterGoalMl = profileRow?.water_goal_ml ?? 2000;
+  const volumeUnit: "ml" | "oz" = profileRow?.units_volume === "oz" ? "oz" : "ml";
 
   // Aggregate per-macro totals from every item in every meal today.
   const totalProtein = itemRows.reduce(
@@ -185,32 +162,17 @@ export default async function TodayPage() {
     <div className="flex flex-col gap-6">
       <section className="flex flex-col items-center gap-4 rounded-3xl bg-[var(--color-surface)] py-6 shadow-sm">
         <DailyRing
-          consumed={netConsumed}
+          consumed={totalKcal}
           target={target}
-          errorBandLow={cards.length ? Math.max(0, bandLow - activeBurned) : undefined}
-          errorBandHigh={cards.length ? Math.max(0, bandHigh - activeBurned) : undefined}
+          errorBandLow={cards.length ? bandLow : undefined}
+          errorBandHigh={cards.length ? bandHigh : undefined}
         />
         <div className="text-center">
           <p className="text-sm text-[var(--color-text-secondary)]">
-            {netConsumed >= target
+            {totalKcal >= target
               ? "Daily goal reached"
-              : `${Math.max(0, Math.round(target - netConsumed))} kcal to go`}
+              : `${Math.max(0, Math.round(target - totalKcal))} kcal to go`}
           </p>
-          {activeBurned > 0 ? (
-            <p className="mt-1 text-xs text-[var(--color-text-tertiary)] tabular-nums">
-              <span className="text-[var(--color-text-secondary)]">
-                {Math.round(totalKcal)} eaten
-              </span>
-              {" – "}
-              <span className="text-[var(--color-success-green)]">
-                {Math.round(activeBurned)} burned
-              </span>
-              {" = "}
-              <span className="font-semibold text-[var(--color-text-primary)]">
-                {Math.round(netConsumed)} net
-              </span>
-            </p>
-          ) : null}
         </div>
         <MacrosRow
           protein_g={totalProtein}
@@ -220,49 +182,9 @@ export default async function TodayPage() {
           carb_target={goalRow?.carb_g ?? null}
           fat_target={goalRow?.fat_g ?? null}
         />
-        {(activityRow || workoutRows.length > 0) ? (
-          <div className="mt-2 flex w-full items-center justify-around gap-3 border-t border-[var(--color-surface-border)] px-4 pt-3 text-center">
-            <Stat label="Steps" value={(activityRow?.steps ?? 0).toLocaleString()} />
-            <Stat label="Burned" value={`${Math.round(activeBurned)} kcal`} />
-            <Stat label="Active" value={`${activityRow?.active_minutes ?? 0} min`} />
-            <Stat label="Workouts" value={String(workoutRows.length)} />
-          </div>
-        ) : null}
       </section>
 
-      {workoutRows.length > 0 ? (
-        <section className="flex flex-col gap-2 rounded-3xl bg-[var(--color-surface)] p-4 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-            Today&apos;s workouts
-          </h2>
-          <ul className="flex flex-col divide-y divide-[var(--color-surface-border)]">
-            {workoutRows.map((w) => {
-              const start = w.started_at instanceof Date ? w.started_at : new Date(w.started_at as unknown as string);
-              const time = start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-              return (
-                <li key={w.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                      {w.category_label ?? "Workout"}
-                    </span>
-                    <span className="text-xs text-[var(--color-text-secondary)] tabular-nums">
-                      {time}
-                      {w.duration_s ? ` · ${Math.round(w.duration_s / 60)} min` : ""}
-                      {w.distance_m ? ` · ${(w.distance_m / 1000).toFixed(2)} km` : ""}
-                      {w.avg_hr ? ` · ${w.avg_hr} bpm avg` : ""}
-                    </span>
-                  </div>
-                  {w.active_kcal && w.active_kcal > 0 ? (
-                    <span className="text-sm font-semibold tabular-nums text-[var(--color-spark-orange)]">
-                      −{w.active_kcal} kcal
-                    </span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
+      <WaterCard initialMl={waterMl} goalMl={waterGoalMl} unit={volumeUnit} />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">

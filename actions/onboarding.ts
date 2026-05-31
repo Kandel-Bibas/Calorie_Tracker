@@ -25,7 +25,6 @@ const RawSchema = z.object({
   target_weight_kg: z.number().min(20).max(300).optional(),
   pace: z.enum(["easy", "steady", "aggressive"]).optional(),
   daily_kcal: z.number().int().min(800).max(6000).optional(),
-  reminder_time: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
   timezone: z.string().default("America/Los_Angeles"),
   units_weight: z.enum(["lb", "kg"]).default("lb"),
   units_height: z.enum(["ft", "cm"]).default("ft"),
@@ -92,7 +91,6 @@ export async function claimOnboarding(raw: unknown): Promise<ClaimOnboardingResu
       protein_g: macros.protein_g,
       carb_g: macros.carb_g,
       fat_g: macros.fat_g,
-      reminder_time: s.reminder_time ?? undefined,
     },
     firstWeightKg: s.current_weight_kg,
   });
