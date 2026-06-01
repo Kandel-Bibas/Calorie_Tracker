@@ -28,3 +28,5 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 .env*
+# ...but keep the committed template (no secrets, just placeholders)
+!.env.example
