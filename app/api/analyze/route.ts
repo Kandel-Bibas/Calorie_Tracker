@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { aiCalls, foodCache, mealDrafts, profiles } from "@/db/schema";
 import { uploadMealPhoto } from "@/lib/storage";
 import { analyzeMeal } from "@/lib/gemini";
+import { checkAnalyzeRateLimit } from "@/lib/rate-limit";
 import { resolveItem, type ResolvedItem } from "@/lib/resolve";
 import { mealBand } from "@/lib/error-bands";
 import { userToday } from "@/lib/dates";
@@ -172,6 +173,23 @@ export async function POST(req: Request): Promise<Response> {
       { error: "need photo, audio, transcript, typed_text, or scanned_items" },
       { status: 400 },
     );
+  }
+
+  // ---- Rate limit the LLM-backed path (per-user hourly/daily + global daily)
+  // to protect the shared API key. Barcode-only adds (no Gemini) are exempt. ----
+  if (hasGeminiInput) {
+    const rl = await checkAnalyzeRateLimit(userId);
+    if (!rl.ok) {
+      return Response.json(
+        { error: rl.reason ?? "rate limit exceeded" },
+        {
+          status: 429,
+          headers: rl.retryAfterSec
+            ? { "Retry-After": String(rl.retryAfterSec) }
+            : undefined,
+        },
+      );
+    }
   }
 
   // ---- Build the streaming response ----

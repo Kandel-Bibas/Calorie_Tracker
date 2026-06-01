@@ -95,12 +95,20 @@ export default function LogPage() {
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
+        let serverMsg = errText;
+        try {
+          const parsed = JSON.parse(errText) as { error?: string };
+          if (parsed?.error) serverMsg = parsed.error;
+        } catch {
+          // body wasn't JSON — keep the raw text
+        }
         dispatch({
           type: "ERROR",
           message:
-            res.status === 429
-              ? "Daily AI cost cap reached. Try again tomorrow."
-              : errText || `Request failed (${res.status})`,
+            serverMsg ||
+            (res.status === 429
+              ? "You're adding meals too fast. Please try again later."
+              : `Request failed (${res.status})`),
         });
         return;
       }
