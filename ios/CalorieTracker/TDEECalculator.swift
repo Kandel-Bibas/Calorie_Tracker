@@ -20,6 +20,7 @@ struct TDEECalculator {
     }
 
     /// Returns nil when required body stats are absent (heightCm == 0, age <= 0, weight <= 0).
+    /// All string fields must be lowercase: sex "male"/"female", activityLevel "sedentary"/"light"/"moderate"/"active"/"very_active", intent "lose"/"gain"/"maintain"/"track", pace "easy"/"steady"/"aggressive". Wrong casing silently falls to defaults.
     static func calculate(_ input: Input) -> Output? {
         guard input.heightCm > 0, input.age > 0, input.currentWeightKg > 0 else { return nil }
 

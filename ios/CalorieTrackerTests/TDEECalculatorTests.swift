@@ -81,4 +81,11 @@ final class TDEECalculatorTests: XCTestCase {
             activityLevel: "moderate", intent: "lose", pace: "steady")
         XCTAssertNil(TDEECalculator.calculate(input))
     }
+
+    func testMissingWeightReturnsNil() {
+        let input = TDEECalculator.Input(
+            sex: "male", currentWeightKg: 0, heightCm: 180, age: 36,
+            activityLevel: "moderate", intent: "lose", pace: "steady")
+        XCTAssertNil(TDEECalculator.calculate(input))
+    }
 }
