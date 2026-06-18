@@ -170,7 +170,42 @@ class SupabaseManager {
             .eq("id", value: mealId)
             .execute()
     }
-    
+
+    func updateMeal(meal: Meal, items: [MealItem]) async throws {
+        struct MealPatch: Encodable {
+            let meal_type: String?
+            let total_kcal: Double
+            let total_protein_g: Double
+            let total_carb_g: Double
+            let total_fat_g: Double
+            let edited_at: String
+        }
+        let patch = MealPatch(
+            meal_type: meal.mealType,
+            total_kcal: meal.totalKcal,
+            total_protein_g: meal.totalProteinG ?? 0,
+            total_carb_g: meal.totalCarbG ?? 0,
+            total_fat_g: meal.totalFatG ?? 0,
+            edited_at: DateFormatter.iso8601Standard.string(from: Date())
+        )
+        try await supabase.database
+            .from("meals")
+            .update(patch)
+            .eq("id", value: meal.id)
+            .execute()
+        try await supabase.database
+            .from("meal_items")
+            .delete()
+            .eq("meal_id", value: meal.id)
+            .execute()
+        for item in items {
+            try await supabase.database
+                .from("meal_items")
+                .insert(item)
+                .execute()
+        }
+    }
+
     // MARK: - Weights CRUD
     
     func fetchWeights(since: Date) async throws -> [Weight] {
