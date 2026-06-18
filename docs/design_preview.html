@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calorie Tracker — Branding Design Exploration</title>
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --panel-dark: #161b26;
+      --border-dark: #242c3d;
+      --text-main: #f0f4f9;
+      --text-muted: #8c9ba5;
+      --accent-orange: #ff6b35;
+      --accent-yellow: #ffb627;
+      
+      /* Active selections (default values) */
+      --gradient-start: #ff512f;
+      --gradient-end: #f09819;
+      --glyph-shadow-blur: 12px;
+      --glyph-shadow-opacity: 0.35;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding: 40px 24px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-dark);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    /* Lessons Learned Panel */
+    .learn-panel {
+      background: var(--panel-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .learn-panel h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent-orange);
+    }
+
+    .learn-panel ul {
+      list-style-type: none;
+    }
+
+    .learn-panel li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    .learn-panel li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #34c759;
+      font-weight: bold;
+    }
+
+    /* Playground Grid */
+    .playground {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 32px;
+    }
+
+    @media (max-width: 900px) {
+      .playground {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Interactive Previews */
+    .preview-canvas {
+      background: #060911;
+      border: 1px solid var(--border-dark);
+      border-radius: 16px;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 480px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-modes {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* iOS Squircle App Icon */
+    .app-icon-squircle {
+      width: 160px;
+      height: 160px;
+      border-radius: 36px;
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      position: relative;
+      transition: background 0.3s ease;
+    }
+
+    /* Launch/Splash Screen simulator */
+    .splash-simulator {
+      width: 220px;
+      height: 440px;
+      border: 6px solid #2d3139;
+      border-radius: 38px;
+      background-color: #ffffff; /* Default light */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      transition: background-color 0.3s ease;
+    }
+
+    .splash-simulator.dark-mode {
+      background-color: #0b0b0d;
+    }
+
+    /* Custom SVG Flame Glyph */
+    .flame-glyph {
+      width: 80px;
+      height: 80px;
+      filter: drop-shadow(0px 4px var(--glyph-shadow-blur) rgba(0, 0, 0, var(--glyph-shadow-opacity)));
+      transition: filter 0.2s ease;
+    }
+
+    .splash-simulator .flame-glyph {
+      width: 70px;
+      height: 70px;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .control-group {
+      background: var(--panel-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .control-group h3 {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .option-btn {
+      background: #1c2333;
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .option-btn:hover {
+      background: #242e42;
+      border-color: #3b4b6b;
+    }
+
+    .option-btn.active {
+      background: var(--accent-orange);
+      border-color: var(--accent-orange);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* Slider styling */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #242c3d;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-orange);
+      cursor: pointer;
+    }
+
+    /* Animations & Live Demo */
+    .demo-trigger {
+      background: #34c759;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .demo-trigger:hover {
+      background: #28a745;
+    }
+
+    /* Mock Login View inside Phone Frame */
+    .phone-login-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+
+    .phone-login-view.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .login-logo-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 60px;
+      gap: 12px;
+    }
+
+    .login-logo-container h4 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .input-field {
+      background: #1c1c1e;
+      border: 1px solid #2c2c2e;
+      border-radius: 8px;
+      padding: 12px;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .login-btn {
+      background: var(--gradient-start);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.3s;
+    }
+
+    /* Metadata / Copy block */
+    .metadata-block {
+      background: #0d1117;
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #c9d1d9;
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-top: 10px;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      color: var(--accent-orange);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+      margin-top: 6px;
+    }
+
+    .copy-btn:hover {
+      background: #1c2333;
+    }
+
+    /* SVG definitions */
+    .svg-glyph-shape {
+      fill: #ffffff;
+      fill-opacity: 1;
+    }
+
+    .variant-b-layered .outer-flame {
+      fill: rgba(255, 255, 255, 0.25);
+    }
+    .variant-b-layered .inner-flame {
+      fill: #ffffff;
+    }
+
+    .variant-c-cutout .outer-flame {
+      fill: #ffffff;
+    }
+    .variant-c-cutout .inner-flame {
+      fill: none;
+      stroke: var(--gradient-start);
+      stroke-width: 3.5;
+    }
+    
+    .splash-simulator.dark-mode .variant-c-cutout .inner-flame {
+      stroke: #0b0b0d;
+    }
+    .splash-simulator:not(.dark-mode) .variant-c-cutout .inner-flame {
+      stroke: #ffffff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Calorie Tracker — Branding Design System</h1>
+    <p class="subtitle">Applying minimalist high-contrast vector design principles learned from the Wardrobe app.</p>
+  </header>
+
+  <section class="learn-panel">
+    <h2>Lessons Learned from Wardrobe App Style</h2>
+    <ul>
+      <li><strong>Vector Simplicity over 3D Renderings:</strong> Standard 3D claymorphic app icons with physical cards in them create double borders and render poorly at small device sizes. We adopt a clean flat/shadowed white vector glyph in the center.</li>
+      <li><strong>Glyph Drop Shadows for Depth:</strong> The vector icon glyph is elevated with a soft drop shadow (blurred shadow) to separate it from the vibrant color gradient background.</li>
+      <li><strong>Consistent Splash Screen Setup:</strong> The splash screen uses the same simplified white transparent logo glyph centered on a solid adaptive background (vibrant blue in wardrobe, warm orange/deep charcoal for calorie tracker).</li>
+    </ul>
+  </section>
+
+  <div class="playground">
+    
+    <!-- Canvas/Previews -->
+    <div class="preview-canvas">
+      <div class="preview-modes" id="previewContainer">
+        
+        <!-- App Icon -->
+        <div style="text-align: center;">
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">APP ICON</p>
+          <div class="app-icon-squircle" id="iconPreview">
+            <!-- Flame SVG Glyph -->
+            <svg class="flame-glyph variant-b-layered" viewBox="0 0 100 100" id="svgIcon">
+              <path class="outer-flame" d="M50 8 C 35 22, 25 38, 32 55 C 22 56, 16 72, 28 84 C 40 96, 60 96, 72 84 C 84 72, 78 56, 68 55 C 75 38, 65 22, 50 8 Z" fill="#ffffff" />
+              <path class="inner-flame" d="M50 28 C 40 40, 36 52, 42 62 C 35 64, 33 74, 42 82 C 50 88, 50 88, 58 82 C 67 74, 65 64, 58 62 C 64 52, 60 40, 50 28 Z" fill="#ffffff" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Splash Screen Phone -->
+        <div style="text-align: center;">
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight: 600;">LAUNCH / SPLASH SCREEN</p>
+          <div class="splash-simulator" id="splashPreview">
+            <svg class="flame-glyph variant-b-layered" viewBox="0 0 100 100" id="svgSplash" style="fill: #fff;">
+              <path class="outer-flame" d="M50 8 C 35 22, 25 38, 32 55 C 22 56, 16 72, 28 84 C 40 96, 60 96, 72 84 C 84 72, 78 56, 68 55 C 75 38, 65 22, 50 8 Z" fill="#ffffff" />
+              <path class="inner-flame" d="M50 28 C 40 40, 36 52, 42 62 C 35 64, 33 74, 42 82 C 50 88, 50 88, 58 82 C 67 74, 65 64, 58 62 C 64 52, 60 40, 50 28 Z" fill="#ffffff" />
+            </svg>
+
+            <!-- Interactive Login Simulator inside Splash -->
+            <div class="phone-login-view" id="phoneLogin">
+              <div class="login-logo-container">
+                <svg width="48" height="48" class="variant-b-layered" viewBox="0 0 100 100" id="svgLogin">
+                  <path class="outer-flame" d="M50 8 C 35 22, 25 38, 32 55 C 22 56, 16 72, 28 84 C 40 96, 60 96, 72 84 C 84 72, 78 56, 68 55 C 75 38, 65 22, 50 8 Z" fill="#ffffff" />
+                  <path class="inner-flame" d="M50 28 C 40 40, 36 52, 42 62 C 35 64, 33 74, 42 82 C 50 88, 50 88, 58 82 C 67 74, 65 64, 58 62 C 64 52, 60 40, 50 28 Z" fill="#ffffff" />
+                </svg>
+                <h4>Calorie Tracker</h4>
+              </div>
+              <div class="login-form">
+                <input type="text" class="input-field" placeholder="name@example.com" disabled />
+                <button class="login-btn" disabled>Send Verification Code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+      
+      <!-- Glyph Rendering Style -->
+      <div class="control-group">
+        <h3>1. Glyph Rendering Style</h3>
+        <div class="options-grid">
+          <button class="option-btn active" onclick="setGlyphStyle('layered', this)">Double Silhouette (Recommended)</button>
+          <button class="option-btn" onclick="setGlyphStyle('outline', this)">Solid White Silhouette</button>
+          <button class="option-btn" onclick="setGlyphStyle('cutout', this)">Negative Space Cutout</button>
+        </div>
+      </div>
+
+      <!-- Icon Background Gradient -->
+      <div class="control-group">
+        <h3>2. Icon Background Gradient</h3>
+        <div class="options-grid">
+          <button class="option-btn active" onclick="setGradient('#FF512F', '#F09819', this)">Coral Red to Orange</button>
+          <button class="option-btn" onclick="setGradient('#FF8C00', '#FF3B30', this)">Orange to Red (High Contrast)</button>
+          <button class="option-btn" onclick="setGradient('#e65c00', '#F9D423', this)">Sunset Amber-Yellow</button>
+        </div>
+      </div>
+
+      <!-- Launch Screen Theme -->
+      <div class="control-group">
+        <h3>3. Launch Screen Background</h3>
+        <div class="options-grid">
+          <button class="option-btn active" id="splashLightBtn" onclick="setSplashTheme('light', this)">Vibrant Brand Orange (Light Mode)</button>
+          <button class="option-btn" id="splashDarkBtn" onclick="setSplashTheme('dark', this)">Deep Charcoal #0B0B0D (Dark Mode)</button>
+        </div>
+      </div>
+
+      <!-- Tunable Shadows -->
+      <div class="control-group">
+        <h3>4. Soft Depth Shadows</h3>
+        <div class="slider-row">
+          <div class="slider-label"><span>Shadow Blur</span><span id="shadowBlurVal">12px</span></div>
+          <input type="range" min="4" max="24" value="12" oninput="adjustShadowBlur(this.value)" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-label"><span>Shadow Opacity</span><span id="shadowOpacityVal">35%</span></div>
+          <input type="range" min="15" max="60" value="35" oninput="adjustShadowOpacity(this.value)" />
+        </div>
+      </div>
+
+      <!-- Interactive Flow -->
+      <div class="control-group">
+        <h3>5. Interactive Testing</h3>
+        <button class="demo-trigger" onclick="runLaunchFlow()">Run App Launch Animation</button>
+      </div>
+
+      <!-- Config Metadata Export -->
+      <div class="control-group">
+        <h3>Configuration JSON</h3>
+        <div class="metadata-block" id="jsonBlock">{
+  "AppIcon": {
+    "gradient": "linear-gradient(135deg, #ff512f, #f09819)",
+    "glyph_style": "layered",
+    "shadow": "drop-shadow(0px 4px 12px rgba(0,0,0,0.35))"
+  },
+  "LaunchScreen": {
+    "light_background": "#FF512F",
+    "dark_background": "#0B0B0D",
+    "glyph": "launch-image.png"
+  }
+}</div>
+        <button class="copy-btn" onclick="copyConfig()">Copy Config</button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let activeGradientStart = '#ff512f';
+  let activeGradientEnd = '#f09819';
+  let activeGlyphStyle = 'layered';
+  let activeShadowBlur = 12;
+  let activeShadowOpacity = 35;
+  let activeSplashTheme = 'light';
+
+  function setGlyphStyle(style, btn) {
+    const btns = btn.parentNode.querySelectorAll('.option-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    activeGlyphStyle = style;
+
+    const svgIcon = document.getElementById('svgIcon');
+    const svgSplash = document.getElementById('svgSplash');
+    const svgLogin = document.getElementById('svgLogin');
+
+    [svgIcon, svgSplash, svgLogin].forEach(svg => {
+      svg.className.baseVal = 'flame-glyph';
+      if (style === 'layered') {
+        svg.classList.add('variant-b-layered');
+      } else if (style === 'outline') {
+        svg.classList.add('variant-a-outline');
+      } else if (style === 'cutout') {
+        svg.classList.add('variant-c-cutout');
+      }
+    });
+
+    updateConfigJson();
+  }
+
+  function setGradient(start, end, btn) {
+    const btns = btn.parentNode.querySelectorAll('.option-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    activeGradientStart = start;
+    activeGradientEnd = end;
+
+    document.documentElement.style.setProperty('--gradient-start', start);
+    document.documentElement.style.setProperty('--gradient-end', end);
+    
+    const splash = document.getElementById('splashPreview');
+    if (activeSplashTheme === 'light') {
+      splash.style.backgroundColor = start;
+    }
+
+    updateConfigJson();
+  }
+
+  function setSplashTheme(theme, btn) {
+    const btns = btn.parentNode.querySelectorAll('.option-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    activeSplashTheme = theme;
+    const splash = document.getElementById('splashPreview');
+    
+    if (theme === 'dark') {
+      splash.classList.add('dark-mode');
+      splash.style.backgroundColor = '#0b0b0d';
+    } else {
+      splash.classList.remove('dark-mode');
+      splash.style.backgroundColor = activeGradientStart;
+    }
+
+    updateConfigJson();
+  }
+
+  function adjustShadowBlur(val) {
+    activeShadowBlur = val;
+    document.getElementById('shadowBlurVal').innerText = val + 'px';
+    document.documentElement.style.setProperty('--glyph-shadow-blur', val + 'px');
+    updateConfigJson();
+  }
+
+  function adjustShadowOpacity(val) {
+    activeShadowOpacity = val;
+    document.getElementById('shadowOpacityVal').innerText = val + '%';
+    document.documentElement.style.setProperty('--glyph-shadow-opacity', val / 100);
+    updateConfigJson();
+  }
+
+  function updateConfigJson() {
+    const config = {
+      "AppIcon": {
+        "gradient": `linear-gradient(135deg, ${activeGradientStart}, ${activeGradientEnd})`,
+        "glyph_style": activeGlyphStyle,
+        "shadow": `drop-shadow(0px 4px ${activeShadowBlur}px rgba(0,0,0,${(activeShadowOpacity/100).toFixed(2)}))`
+      },
+      "LaunchScreen": {
+        "light_background": activeGradientStart,
+        "dark_background": "#0B0B0D",
+        "glyph": "launch-image.png"
+      }
+    };
+    document.getElementById('jsonBlock').innerText = JSON.stringify(config, null, 2);
+  }
+
+  function runLaunchFlow() {
+    const phoneLogin = document.getElementById('phoneLogin');
+    const splash = document.getElementById('splashPreview');
+    
+    if (activeSplashTheme === 'dark') {
+      splash.style.backgroundColor = '#0b0b0d';
+    } else {
+      splash.style.backgroundColor = activeGradientStart;
+    }
+    phoneLogin.classList.remove('visible');
+
+    setTimeout(() => {
+      phoneLogin.classList.add('visible');
+    }, 1200);
+  }
+
+  function copyConfig() {
+    const text = document.getElementById('jsonBlock').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.innerText = 'Copied!';
+      btn.style.color = '#34c759';
+      btn.style.borderColor = '#34c759';
+      setTimeout(() => {
+        btn.innerText = 'Copy Config';
+        btn.style.color = 'var(--accent-orange)';
+        btn.style.borderColor = 'var(--border-dark)';
+      }, 1500);
+    });
+  }
+
+  document.getElementById('splashPreview').style.backgroundColor = activeGradientStart;
+</script>
+
+</body>
+</html>
