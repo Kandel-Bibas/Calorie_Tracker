@@ -158,7 +158,8 @@ struct Goal: Codable, Identifiable, Hashable {
     var fatG: Int?
     var activatedAt: Date?
     var supersededAt: Date?
-    
+    var activityLevel: String?
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
@@ -171,6 +172,7 @@ struct Goal: Codable, Identifiable, Hashable {
         case fatG = "fat_g"
         case activatedAt = "activated_at"
         case supersededAt = "superseded_at"
+        case activityLevel = "activity_level"
     }
     
     init(from decoder: Decoder) throws {
@@ -186,6 +188,7 @@ struct Goal: Codable, Identifiable, Hashable {
         fatG = try container.decodeIfPresent(Int.self, forKey: .fatG)
         activatedAt = try container.decodeIfPresent(Date.self, forKey: .activatedAt)
         supersededAt = try container.decodeIfPresent(Date.self, forKey: .supersededAt)
+        activityLevel = try container.decodeIfPresent(String.self, forKey: .activityLevel)
     }
     
     init(
@@ -199,7 +202,8 @@ struct Goal: Codable, Identifiable, Hashable {
         carbG: Int?,
         fatG: Int?,
         activatedAt: Date?,
-        supersededAt: Date?
+        supersededAt: Date?,
+        activityLevel: String?
     ) {
         self.id = id
         self.userId = userId
@@ -212,6 +216,7 @@ struct Goal: Codable, Identifiable, Hashable {
         self.fatG = fatG
         self.activatedAt = activatedAt
         self.supersededAt = supersededAt
+        self.activityLevel = activityLevel
     }
 }
 

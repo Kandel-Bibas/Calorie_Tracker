@@ -233,7 +233,8 @@ struct GoalsEditView: View {
             carbG: carb,
             fatG: fat,
             activatedAt: Date(),
-            supersededAt: nil
+            supersededAt: nil,
+            activityLevel: nil
         )
 
         Task {
