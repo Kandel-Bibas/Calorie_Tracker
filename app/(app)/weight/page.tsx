@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { weights, profiles, goals } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { WeightChart, type WeightPoint } from "@/components/weight-chart/weight-chart";
+import { toUserDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +21,14 @@ export default async function WeightPage() {
 
   const profileRow = await db.query.profiles.findFirst({
     where: eq(profiles.id, user.id),
-    columns: { units_weight: true },
+    columns: { units_weight: true, timezone: true },
   });
   const unit: "lb" | "kg" = (profileRow?.units_weight as "lb" | "kg") ?? "lb";
+  const tz = profileRow?.timezone ?? "America/Los_Angeles";
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 400); // load ~1y+ so the "all" tab works
-  const cutoffIso = cutoff.toISOString().slice(0, 10);
+  const cutoffIso = toUserDate(cutoff, tz);
 
   const rows = await db
     .select({ recorded_on: weights.recorded_on, weight_kg: weights.weight_kg })

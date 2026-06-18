@@ -4,7 +4,7 @@ import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { createClient } from "@/lib/supabase/server";
 import { getDb } from "@/lib/db";
 import { meals, profiles, goals, waterLogs } from "@/db/schema";
-import { userToday } from "@/lib/dates";
+import { userToday, toUserDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,13 @@ interface DayCell {
   inMonth: boolean;
 }
 
+function formatDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function getMonthGrid(year: number, monthIdx: number): DayCell[] {
   const first = new Date(year, monthIdx, 1);
   const last = new Date(year, monthIdx + 1, 0);
@@ -23,15 +30,15 @@ function getMonthGrid(year: number, monthIdx: number): DayCell[] {
   // Leading days from previous month
   for (let i = leading; i > 0; i--) {
     const d = new Date(year, monthIdx, 1 - i);
-    cells.push({ date: d.toISOString().slice(0, 10), kcal: 0, waterMl: 0, inMonth: false });
+    cells.push({ date: formatDate(d), kcal: 0, waterMl: 0, inMonth: false });
   }
   for (let d = 1; d <= last.getDate(); d++) {
     const dt = new Date(year, monthIdx, d);
-    cells.push({ date: dt.toISOString().slice(0, 10), kcal: 0, waterMl: 0, inMonth: true });
+    cells.push({ date: formatDate(dt), kcal: 0, waterMl: 0, inMonth: true });
   }
   while (cells.length % 7 !== 0) {
     const next = new Date(year, monthIdx, last.getDate() + (cells.length % 7));
-    cells.push({ date: next.toISOString().slice(0, 10), kcal: 0, waterMl: 0, inMonth: false });
+    cells.push({ date: formatDate(next), kcal: 0, waterMl: 0, inMonth: false });
   }
   return cells;
 }
@@ -81,7 +88,7 @@ export default async function HistoryPage() {
       m.consumed_at instanceof Date
         ? m.consumed_at
         : new Date(m.consumed_at as unknown as string);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = toUserDate(d, tz);
     byDate.set(iso, (byDate.get(iso) ?? 0) + Number(m.total_kcal));
   }
   for (const c of cells) {
@@ -105,7 +112,7 @@ export default async function HistoryPage() {
       w.logged_at instanceof Date
         ? w.logged_at
         : new Date(w.logged_at as unknown as string);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = toUserDate(d, tz);
     waterByDate.set(iso, (waterByDate.get(iso) ?? 0) + (w.amount_ml ?? 0));
   }
   for (const c of cells) {

@@ -48,12 +48,12 @@ describe("zodToGeminiSchema", () => {
 });
 
 describe("SYSTEM_PROMPT", () => {
-  it("forbids calorie output", () => {
-    expect(SYSTEM_PROMPT).toMatch(/NEVER output calories/);
+  it("instructs per-100g calorie output", () => {
+    expect(SYSTEM_PROMPT).toMatch(/kcal_per_100g/);
   });
 
   it("instructs trust of user-stated grams", () => {
-    expect(SYSTEM_PROMPT).toMatch(/TRUST the user's numbers/);
+    expect(SYSTEM_PROMPT).toMatch(/TRUST the user's stated grams/);
   });
 
   it("documents all four logging modes", () => {

@@ -14,7 +14,13 @@ import { logWeight } from "@/actions/weights";
 export default function AddWeightPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  })();
   const [date, setDate] = React.useState(todayIso);
   const [weight, setWeight] = React.useState("");
   const [unit, setUnit] = React.useState<"lb" | "kg">("lb");

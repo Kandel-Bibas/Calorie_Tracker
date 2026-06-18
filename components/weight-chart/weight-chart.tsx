@@ -63,7 +63,12 @@ export function WeightChart({ points, unit, goalWeight, className }: WeightChart
     const days = RANGE_DAYS[range];
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    const cutoffIso = cutoff.toISOString().slice(0, 10);
+    const cutoffIso = (() => {
+      const y = cutoff.getFullYear();
+      const m = String(cutoff.getMonth() + 1).padStart(2, "0");
+      const day = String(cutoff.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    })();
     return points.filter((p) => p.date >= cutoffIso);
   }, [points, range]);
 

@@ -22,7 +22,7 @@ A multimodal, provenance-first nutrition tracker. Every calorie traces back to a
 
 Most calorie apps fail in two ways that compound: portion-size estimation is the biggest source of error (photo-AI apps can overestimate complex meals by 15–50%), and crowdsourced food databases drift as products change. This app is built around one principle — **the calorie number should be as deterministic as possible, and the UI should be honest about what it can't know.**
 
-- **Provenance over guesswork.** Macros come from real databases (USDA FoodData Central, Open Food Facts, FatSecret, CalorieNinjas). Gemini is used to *identify and portion* food from a photo/voice/text, not to invent nutrition numbers.
+- **Provenance over guesswork.** Macros come from real databases and verified estimates (FatSecret, CalorieNinjas, Gemini inline per-100g, and Open Food Facts; USDA FoodData Central has been retired due to poor matching on prepared/cooked foods). Gemini is used to *identify, portion, and estimate* food from a photo/voice/text where direct matches are not found, and verified databases are used for exact products.
 - **Error bands, not fake precision.** A meal shows `355 kcal ± 124`, because pretending an estimate is exact is the lie every other app tells.
 - **Fast by design.** Log a meal in ~15 seconds (photo + voice), onboard in under a minute.
 
@@ -68,7 +68,7 @@ Most calorie apps fail in two ways that compound: portion-size estimation is the
 | Validation | **Zod** — one schema reused as Gemini's response schema, form validation, and TS types |
 | AI | **Gemini 3 Flash Preview** (multimodal extraction with JSON-schema output) |
 | Voice | Browser **Web Speech API**, with **OpenAI Whisper** fallback |
-| Nutrition data | USDA FoodData Central · Open Food Facts · FatSecret · CalorieNinjas |
+| Nutrition data | FatSecret · CalorieNinjas · Gemini per-100g · Open Food Facts (USDA retired) |
 | Testing | **Vitest** (unit + Testcontainers integration), **Playwright** (E2E), a custom LLM eval harness |
 | Hosting | **Vercel** |
 
@@ -82,7 +82,7 @@ photo / voice / text
         │                       │
         │            streamed back as NDJSON (live UI updates)
         ▼                       ▼
-  resolve each item  ──►  USDA / Open Food Facts / FatSecret / CalorieNinjas
+  resolve each item  ──►  FatSecret / CalorieNinjas / Gemini / Open Food Facts
         │
         ▼
   review & edit  ──►  save (Server Action → Drizzle → Supabase, RLS-scoped)
@@ -95,7 +95,7 @@ Each food item carries the source it was matched against, so every number on the
 ### Prerequisites
 - Node 20+, [pnpm](https://pnpm.io) 9+
 - A [Supabase](https://supabase.com) project (Postgres + Auth + Storage)
-- API keys: [Gemini](https://ai.google.dev), [USDA FoodData Central](https://fdc.nal.usda.gov/api-key-signup) (free); OpenAI optional (Whisper fallback)
+- API keys: [Gemini](https://ai.google.dev), [FatSecret](https://platform.fatsecret.com) or [CalorieNinjas](https://calorieninjas.com) (optional/free tiers); OpenAI optional (Whisper fallback)
 
 ### Setup
 
