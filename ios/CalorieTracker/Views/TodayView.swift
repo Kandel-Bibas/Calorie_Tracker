@@ -18,6 +18,7 @@ struct TodayView: View {
 
     @State private var activeKcal: Double = 0
     @State private var steps: Int = 0
+    @State private var editingMeal: Meal? = nil
 
     private var timezone: String {
         appState.supabaseManager.currentProfile?.timezone ?? "America/Los_Angeles"
@@ -84,6 +85,11 @@ struct TodayView: View {
                 }
             }
             .task { await loadData() }
+            .sheet(item: $editingMeal) { meal in
+                MealEditView(meal: meal) {
+                    Task { await loadData() }
+                }
+            }
         }
     }
 
@@ -272,7 +278,6 @@ struct TodayView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
-
                             Button(role: .destructive) {
                                 deleteMeal(mealId: meal.id)
                             } label: {
@@ -283,6 +288,8 @@ struct TodayView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                    .onTapGesture { editingMeal = meal }
 
                     if meal.id != meals.last?.id {
                         Divider()
