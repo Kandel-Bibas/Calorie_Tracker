@@ -9,6 +9,7 @@ struct HistoryDetailView: View {
     var goalKcal: Double
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -27,10 +28,11 @@ struct HistoryDetailView: View {
                         .padding(.vertical, 4)
 
                         let totalWater = waterLogs.reduce(0) { $0 + $1.amountMl }
+                        let volumeUnit = appState.supabaseManager.currentProfile?.unitsVolume ?? "ml"
                         CategoryTile(
                             symbol: "drop.fill",
                             tint: AppPalette.water,
-                            value: "\(totalWater) ml",
+                            value: AppUnits.formatVolume(ml: totalWater, unit: volumeUnit),
                             label: "water logged"
                         )
                     }

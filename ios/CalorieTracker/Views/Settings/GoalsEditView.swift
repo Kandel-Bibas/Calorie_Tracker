@@ -16,6 +16,17 @@ struct GoalsEditView: View {
     @State private var errorMessage: String? = nil
     @State private var successMessage: String? = nil
 
+    private var weightUnit: String {
+        appState.supabaseManager.currentProfile?.unitsWeight ?? "lb"
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
+
     var body: some View {
         Form {
             if let errorMessage {
@@ -40,8 +51,16 @@ struct GoalsEditView: View {
                     Text("Just Track").tag("track")
                 }
 
-                TextField("Target Weight (kg)", text: $targetWeightString)
-                    .keyboardType(.decimalPad)
+                HStack {
+                    Text("Target weight")
+                    Spacer()
+                    TextField("0", text: $targetWeightString)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                    Text(weightUnit)
+                        .foregroundStyle(.secondary)
+                }
 
                 Picker("Pace", selection: $selectedPace) {
                     Text("Easy").tag("easy")
@@ -49,17 +68,49 @@ struct GoalsEditView: View {
                     Text("Aggressive").tag("aggressive")
                 }
 
-                TextField("Daily Calories Goal (kcal)", text: $dailyKcalString)
-                    .keyboardType(.numberPad)
+                HStack {
+                    Text("Daily calories")
+                    Spacer()
+                    TextField("0", text: $dailyKcalString)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                    Text("kcal")
+                        .foregroundStyle(.secondary)
+                }
 
-                TextField("Protein Goal (g)", text: $proteinString)
-                    .keyboardType(.numberPad)
+                HStack {
+                    Text("Protein")
+                    Spacer()
+                    TextField("0", text: $proteinString)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                    Text("g")
+                        .foregroundStyle(.secondary)
+                }
 
-                TextField("Carbs Goal (g)", text: $carbString)
-                    .keyboardType(.numberPad)
+                HStack {
+                    Text("Carbs")
+                    Spacer()
+                    TextField("0", text: $carbString)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                    Text("g")
+                        .foregroundStyle(.secondary)
+                }
 
-                TextField("Fat Goal (g)", text: $fatString)
-                    .keyboardType(.numberPad)
+                HStack {
+                    Text("Fat")
+                    Spacer()
+                    TextField("0", text: $fatString)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                    Text("g")
+                        .foregroundStyle(.secondary)
+                }
 
                 Button {
                     updateGoal()
@@ -78,16 +129,33 @@ struct GoalsEditView: View {
             }
 
             if !goalHistory.isEmpty {
-                Section("Goals History") {
-                    ForEach(goalHistory) { goal in
+                Section {
+                    ForEach(goalHistory.sorted {
+                        ($0.activatedAt ?? .distantPast) > ($1.activatedAt ?? .distantPast)
+                    }) { goal in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
                                 Text(goal.intent?.capitalized ?? "Track")
                                     .fontWeight(.medium)
                                 Spacer()
+                                if goal.supersededAt == nil {
+                                    Text("Active")
+                                        .font(.caption2)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 2)
+                                        .background(Color.green.opacity(0.2))
+                                        .foregroundStyle(.green)
+                                        .clipShape(Capsule())
+                                }
                                 Text("\(goal.dailyKcal) kcal")
                                     .foregroundStyle(.orange)
                                     .fontWeight(.semibold)
+                            }
+
+                            if let activatedAt = goal.activatedAt {
+                                Text(Self.dateFormatter.string(from: activatedAt))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
 
                             if let pace = goal.pace {
@@ -102,6 +170,10 @@ struct GoalsEditView: View {
                         }
                         .padding(.vertical, 2)
                     }
+                } header: {
+                    Text("Goals History")
+                } footer: {
+                    Text("Each time you update your goals, your previous targets are saved here.")
                 }
             }
         }
@@ -121,7 +193,9 @@ struct GoalsEditView: View {
                 self.goalHistory = history
                 if let active = history.first(where: { $0.supersededAt == nil }) {
                     selectedIntent = active.intent ?? "maintain"
-                    targetWeightString = active.targetWeightKg.map { String($0) } ?? ""
+                    targetWeightString = active.targetWeightKg.map {
+                        String(format: "%.1f", AppUnits.weightFromKg($0, unit: weightUnit))
+                    } ?? ""
                     selectedPace = active.pace ?? "steady"
                     dailyKcalString = String(active.dailyKcal)
                     proteinString = active.proteinG.map { String($0) } ?? ""
@@ -140,7 +214,9 @@ struct GoalsEditView: View {
         errorMessage = nil
         successMessage = nil
 
-        let targetWeight = Double(targetWeightString)
+        let targetWeight = Double(targetWeightString).map {
+            AppUnits.weightToKg($0, unit: weightUnit)
+        }
         let dailyKcal = Int(dailyKcalString) ?? 2000
         let protein = Int(proteinString)
         let carb = Int(carbString)

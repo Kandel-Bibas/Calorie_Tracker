@@ -8,6 +8,15 @@ struct ProfileEditView: View {
     @State private var activityLevel: String = "sedentary"
     @State private var timezoneString: String = "America/Los_Angeles"
 
+    // Height
+    @State private var heightUnit: String = "ft"
+    @State private var heightCmString: String = ""
+    @State private var heightFtString: String = ""
+    @State private var heightInString: String = ""
+
+    // Year of birth
+    @State private var birthYearString: String = ""
+
     @State private var isSaving: Bool = false
     @State private var errorMessage: String? = nil
     @State private var successMessage: String? = nil
@@ -47,6 +56,46 @@ struct ProfileEditView: View {
 
                 TextField("Timezone", text: $timezoneString)
                     .textInputAutocapitalization(.never)
+
+                // Height entry — switches on the user's chosen height unit
+                if heightUnit == "cm" {
+                    HStack {
+                        Text("Height")
+                        Spacer()
+                        TextField("0", text: $heightCmString)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 120)
+                        Text("cm")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    HStack {
+                        Text("Height")
+                        Spacer()
+                        TextField("0", text: $heightFtString)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 60)
+                        Text("ft")
+                            .foregroundStyle(.secondary)
+                        TextField("0", text: $heightInString)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 60)
+                        Text("in")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                HStack {
+                    Text("Year of birth")
+                    Spacer()
+                    TextField("e.g. 1990", text: $birthYearString)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                }
             }
 
             Section {
@@ -74,11 +123,23 @@ struct ProfileEditView: View {
     }
 
     private func populateForm() {
-        if let profile = appState.supabaseManager.currentProfile {
-            displayName = profile.displayName ?? ""
-            selectedSex = profile.sex ?? "prefer_not"
-            activityLevel = profile.activityLevel ?? "sedentary"
-            timezoneString = profile.timezone ?? "America/Los_Angeles"
+        guard let profile = appState.supabaseManager.currentProfile else { return }
+
+        displayName = profile.displayName ?? ""
+        selectedSex = profile.sex ?? "prefer_not"
+        activityLevel = profile.activityLevel ?? "sedentary"
+        timezoneString = profile.timezone ?? "America/Los_Angeles"
+        heightUnit = profile.unitsHeight ?? "ft"
+        birthYearString = profile.birthYear.map { String($0) } ?? ""
+
+        if let cm = profile.heightCm {
+            if heightUnit == "ft" {
+                let ftIn = AppUnits.cmToFtIn(Double(cm))
+                heightFtString = String(ftIn.ft)
+                heightInString = String(ftIn.inch)
+            } else {
+                heightCmString = String(cm)
+            }
         }
     }
 
@@ -88,6 +149,22 @@ struct ProfileEditView: View {
         errorMessage = nil
         successMessage = nil
 
+        // Compute height in cm from whichever unit fields are active
+        let computedHeightCm: Int?
+        if heightUnit == "cm" {
+            computedHeightCm = Int(heightCmString)
+        } else {
+            let ft = Int(heightFtString) ?? 0
+            let inch = Int(heightInString) ?? 0
+            if ft == 0 && inch == 0 {
+                computedHeightCm = nil
+            } else {
+                computedHeightCm = Int(AppUnits.ftInToCm(ft: ft, inch: inch).rounded())
+            }
+        }
+
+        let computedBirthYear = Int(birthYearString)
+
         // Carry forward all fields this screen does NOT edit from currentProfile,
         // so a partial upsert never clobbers units/water settings (or vice versa).
         let current = appState.supabaseManager.currentProfile
@@ -95,8 +172,8 @@ struct ProfileEditView: View {
             id: userId,
             displayName: displayName.isEmpty ? nil : displayName,
             sex: selectedSex,
-            birthYear: current?.birthYear,
-            heightCm: current?.heightCm,
+            birthYear: computedBirthYear,
+            heightCm: computedHeightCm,
             unitsWeight: current?.unitsWeight ?? "lb",
             unitsHeight: current?.unitsHeight ?? "ft",
             unitsVolume: current?.unitsVolume ?? "ml",

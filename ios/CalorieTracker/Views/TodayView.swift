@@ -23,6 +23,14 @@ struct TodayView: View {
         appState.supabaseManager.currentProfile?.timezone ?? "America/Los_Angeles"
     }
 
+    private var volumeUnit: String {
+        appState.supabaseManager.currentProfile?.unitsVolume ?? "ml"
+    }
+
+    private var weightUnit: String {
+        appState.supabaseManager.currentProfile?.unitsWeight ?? "lb"
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -62,11 +70,12 @@ struct TodayView: View {
             }
             .refreshable { await loadData() }
             .alert("Log Custom Water", isPresented: $showCustomWaterAlert) {
-                TextField("Amount (ml)", text: $customWaterAmount)
+                TextField("Amount (\(volumeUnit))", text: $customWaterAmount)
                     .keyboardType(.numberPad)
                 Button("Add") {
-                    if let amount = Int(customWaterAmount) {
-                        logWater(amount: amount)
+                    let ml = AppUnits.volumeToMl(Double(customWaterAmount) ?? 0, unit: volumeUnit)
+                    if ml > 0 {
+                        logWater(amount: ml)
                     }
                     customWaterAmount = ""
                 }
@@ -159,7 +168,7 @@ struct TodayView: View {
                     Text("Water Intake")
                         .font(.headline)
                         .fontWeight(.semibold)
-                    Text("\(currentWater) ml / \(waterGoal) ml")
+                    Text("\(AppUnits.formatVolume(ml: currentWater, unit: volumeUnit)) / \(AppUnits.formatVolume(ml: waterGoal, unit: volumeUnit))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -175,27 +184,18 @@ struct TodayView: View {
                 .accessibilityLabel("Undo last water log")
             }
             HStack(spacing: 12) {
-                Button {
-                    logWater(amount: 250)
-                } label: {
-                    Text("+250ml")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray5))
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                Button {
-                    logWater(amount: 500)
-                } label: {
-                    Text("+500ml")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray5))
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                ForEach(AppUnits.quickAdds(unit: volumeUnit), id: \.label) { add in
+                    Button {
+                        logWater(amount: add.ml)
+                    } label: {
+                        Text(add.label)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemGray5))
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
                 }
                 Button {
                     showCustomWaterAlert = true
@@ -215,10 +215,7 @@ struct TodayView: View {
     @ViewBuilder
     private var weightCard: some View {
         if let weight = latestWeight {
-            let useMetric = (appState.supabaseManager.currentProfile?.unitsWeight ?? "kg") == "kg"
-            let displayValue = useMetric
-                ? String(format: "%.1f kg", weight.weightKg)
-                : String(format: "%.1f lb", HealthKitMath.kgToLb(weight.weightKg))
+            let displayValue = AppUnits.formatWeight(kg: weight.weightKg, unit: weightUnit)
 
             HealthCard {
                 HStack {
@@ -310,12 +307,14 @@ struct TodayView: View {
             // added a row, so a freshly synced Health weight appears this cycle.
             let weightSince = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
             var fetchedWeights = (try? await appState.supabaseManager.fetchWeights(since: weightSince)) ?? []
-            if await importExternalWeights(existing: fetchedWeights) {
+            if await appState.importExternalHealthWeights(existing: fetchedWeights) {
                 fetchedWeights = (try? await appState.supabaseManager.fetchWeights(since: weightSince)) ?? fetchedWeights
             }
             let latestFetchedWeight = fetchedWeights.first
 
-            let (active, stepCount) = await appState.healthKit.readActiveEnergyAndSteps(for: Date())
+            let (active, stepCount): (Double, Int) = appState.healthConnected
+                ? await appState.healthKit.readActiveEnergyAndSteps(for: Date())
+                : (0, 0)
 
             await MainActor.run {
                 self.meals = fetchedMeals
@@ -333,29 +332,6 @@ struct TodayView: View {
                 self.isLoading = false
             }
         }
-    }
-
-    // MARK: - HealthKit external weight import (Task 2.3)
-    /// Imports external (non-app) Health weight samples for dates not already present locally.
-    /// `existing` is the already-fetched weight list, so dedup needs no extra round-trip.
-    /// Returns true if at least one new sample was imported.
-    @discardableResult
-    private func importExternalWeights(existing: [Weight]) async -> Bool {
-        guard let userId = appState.supabaseManager.currentUserId else { return false }
-        let since = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
-        let samples = await appState.healthKit.readExternalWeightSamples(since: since)
-        guard !samples.isEmpty else { return false }
-        let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"
-        let existingDates = Set(existing.map { $0.recordedOn })
-        var imported = false
-        for s in samples {
-            let dateStr = fmt.string(from: s.date)
-            guard HealthKitMath.shouldImportWeight(forDate: dateStr, existingDates: existingDates) else { continue }
-            let rec = Weight(id: UUID(), userId: userId, recordedOn: dateStr, weightKg: s.kg, createdAt: Date())
-            try? await appState.supabaseManager.upsertWeight(rec)
-            imported = true
-        }
-        return imported
     }
 
     /// Formats a stored "yyyy-MM-dd" weight date as a short, friendly label (e.g. "Jun 18").
@@ -376,7 +352,7 @@ struct TodayView: View {
         Task {
             do {
                 try await appState.supabaseManager.logWater(amountMl: amount, date: Date())
-                await appState.healthKit.writeWater(ml: amount, date: Date())
+                if appState.healthConnected { await appState.healthKit.writeWater(ml: amount, date: Date()) }
                 await loadData()
             } catch {
                 print("Failed to log water: \(error.localizedDescription)")

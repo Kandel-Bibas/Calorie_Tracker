@@ -387,8 +387,10 @@ struct LogView: View {
         Task {
             do {
                 try await appState.supabaseManager.insertMeal(meal: meal, items: mealItems)
-                await appState.healthKit.writeMeal(kcal: totalKcal, proteinG: totalProtein,
-                                                   carbG: totalCarb, fatG: totalFat, date: meal.consumedAt)
+                if appState.healthConnected {
+                    await appState.healthKit.writeMeal(kcal: totalKcal, proteinG: totalProtein,
+                                                       carbG: totalCarb, fatG: totalFat, date: meal.consumedAt)
+                }
                 await MainActor.run {
                     dismiss()
                 }

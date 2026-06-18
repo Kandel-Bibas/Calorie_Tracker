@@ -28,7 +28,7 @@ struct UnitsView: View {
                 }
             }
 
-            Section("Units & Water Goal") {
+            Section {
                 Picker("Weight Unit", selection: $selectedWeightUnit) {
                     Text("lb").tag("lb")
                     Text("kg").tag("kg")
@@ -43,9 +43,27 @@ struct UnitsView: View {
                     Text("ml").tag("ml")
                     Text("oz").tag("oz")
                 }
+                .onChange(of: selectedVolumeUnit) { oldUnit, newUnit in
+                    // Recompute displayed value from the stored profile ml so we
+                    // don't accumulate rounding errors across multiple toggles.
+                    let storedMl = appState.supabaseManager.currentProfile?.waterGoalMl ?? 2000
+                    waterGoal = String(AppUnits.volumeFromMl(storedMl, unit: newUnit))
+                }
 
-                TextField("Water Goal (ml)", text: $waterGoal)
-                    .keyboardType(.numberPad)
+                HStack {
+                    Text("Water goal")
+                    Spacer()
+                    TextField("0", text: $waterGoal)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 120)
+                    Text(selectedVolumeUnit)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Units & Water Goal")
+            } footer: {
+                Text("These set how weights, heights, and volumes are shown throughout the app.")
             }
 
             Section {
@@ -57,7 +75,7 @@ struct UnitsView: View {
                         if isSaving {
                             ProgressView().controlSize(.small)
                         } else {
-                            Text("Save Profile Details")
+                            Text("Save Units & Water")
                         }
                         Spacer()
                     }
@@ -73,12 +91,11 @@ struct UnitsView: View {
     }
 
     private func populateForm() {
-        if let profile = appState.supabaseManager.currentProfile {
-            selectedWeightUnit = profile.unitsWeight ?? "lb"
-            selectedHeightUnit = profile.unitsHeight ?? "ft"
-            selectedVolumeUnit = profile.unitsVolume ?? "ml"
-            waterGoal = String(profile.waterGoalMl ?? 2000)
-        }
+        guard let profile = appState.supabaseManager.currentProfile else { return }
+        selectedWeightUnit = profile.unitsWeight ?? "lb"
+        selectedHeightUnit = profile.unitsHeight ?? "ft"
+        selectedVolumeUnit = profile.unitsVolume ?? "ml"
+        waterGoal = String(AppUnits.volumeFromMl(profile.waterGoalMl ?? 2000, unit: selectedVolumeUnit))
     }
 
     private func save() {
@@ -99,7 +116,7 @@ struct UnitsView: View {
             unitsWeight: selectedWeightUnit,
             unitsHeight: selectedHeightUnit,
             unitsVolume: selectedVolumeUnit,
-            waterGoalMl: Int(waterGoal) ?? 2000,
+            waterGoalMl: AppUnits.volumeToMl(Double(waterGoal) ?? 2000, unit: selectedVolumeUnit),
             activityLevel: current?.activityLevel ?? "sedentary",
             timezone: current?.timezone ?? "America/Los_Angeles",
             createdAt: current?.createdAt

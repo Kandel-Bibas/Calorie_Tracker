@@ -98,7 +98,7 @@ struct AddWeightView: View {
         Task {
             do {
                 try await appState.supabaseManager.upsertWeight(record)
-                await appState.healthKit.writeWeight(kg: weightKg, date: date)
+                if appState.healthConnected { await appState.healthKit.writeWeight(kg: weightKg, date: date) }
                 await MainActor.run {
                     dismiss()
                 }
@@ -242,12 +242,7 @@ struct WeightView: View {
     }
 
     private func formatWeight(_ kg: Double) -> String {
-        let displayUnit = appState.supabaseManager.currentProfile?.unitsWeight ?? "lb"
-        if displayUnit == "lb" {
-            return String(format: "%.1f lb", kg * 2.20462)
-        } else {
-            return String(format: "%.1f kg", kg)
-        }
+        return AppUnits.formatWeight(kg: kg, unit: appState.supabaseManager.currentProfile?.unitsWeight ?? "lb")
     }
 
     private func filterWeights() -> [Weight] {
