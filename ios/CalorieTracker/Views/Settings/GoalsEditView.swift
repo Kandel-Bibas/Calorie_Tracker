@@ -10,6 +10,9 @@ struct GoalsEditView: View {
     @State private var proteinString: String = "150"
     @State private var carbString: String = "200"
     @State private var fatString: String = "67"
+    @State private var activityLevel: String = "sedentary"
+    @State private var isCalculating: Bool = false
+    @State private var calculationMessage: String? = nil
 
     @State private var goalHistory: [Goal] = []
     @State private var isSaving: Bool = false
@@ -68,6 +71,14 @@ struct GoalsEditView: View {
                     Text("Aggressive").tag("aggressive")
                 }
 
+                Picker("Activity Level", selection: $activityLevel) {
+                    Text("Sedentary").tag("sedentary")
+                    Text("Light").tag("light")
+                    Text("Moderate").tag("moderate")
+                    Text("Active").tag("active")
+                    Text("Very Active").tag("very_active")
+                }
+
                 HStack {
                     Text("Daily calories")
                     Spacer()
@@ -111,6 +122,27 @@ struct GoalsEditView: View {
                     Text("g")
                         .foregroundStyle(.secondary)
                 }
+
+                if let calculationMessage {
+                    Text(calculationMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    Task { await calculateTDEE() }
+                } label: {
+                    HStack {
+                        Spacer()
+                        if isCalculating {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Label("Calculate from Stats", systemImage: "function")
+                        }
+                        Spacer()
+                    }
+                }
+                .disabled(isCalculating)
 
                 Button {
                     updateGoal()
@@ -197,6 +229,9 @@ struct GoalsEditView: View {
                         String(format: "%.1f", AppUnits.weightFromKg($0, unit: weightUnit))
                     } ?? ""
                     selectedPace = active.pace ?? "steady"
+                    activityLevel = active.activityLevel
+                        ?? appState.supabaseManager.currentProfile?.activityLevel
+                        ?? "sedentary"
                     dailyKcalString = String(active.dailyKcal)
                     proteinString = active.proteinG.map { String($0) } ?? ""
                     carbString = active.carbG.map { String($0) } ?? ""
@@ -205,6 +240,58 @@ struct GoalsEditView: View {
             }
         } catch {
             print("Failed to load goals history: \(error)")
+        }
+    }
+
+    private func calculateTDEE() async {
+        isCalculating = true
+        defer { Task { @MainActor in isCalculating = false } }
+
+        guard let profile = appState.supabaseManager.currentProfile,
+              let heightCm = profile.heightCm, heightCm > 0,
+              let birthYear = profile.birthYear, birthYear > 0 else {
+            await MainActor.run {
+                calculationMessage = "Complete your profile (height, birth year) first."
+            }
+            return
+        }
+
+        let since = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        let weights = (try? await appState.supabaseManager.fetchWeights(since: since)) ?? []
+
+        guard let latestWeight = weights.first else {
+            await MainActor.run {
+                calculationMessage = "Log a weight first to use auto-calc."
+            }
+            return
+        }
+
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let age = currentYear - birthYear
+
+        let input = TDEECalculator.Input(
+            sex: profile.sex,
+            currentWeightKg: latestWeight.weightKg,
+            heightCm: heightCm,
+            age: age,
+            activityLevel: activityLevel,
+            intent: selectedIntent,
+            pace: selectedPace
+        )
+
+        guard let result = TDEECalculator.calculate(input) else {
+            await MainActor.run {
+                calculationMessage = "Could not calculate — check your profile data."
+            }
+            return
+        }
+
+        await MainActor.run {
+            dailyKcalString = String(result.dailyKcal)
+            proteinString   = String(result.proteinG)
+            carbString      = String(result.carbG)
+            fatString       = String(result.fatG)
+            calculationMessage = "Suggested values filled in. Adjust if needed."
         }
     }
 
@@ -234,7 +321,7 @@ struct GoalsEditView: View {
             fatG: fat,
             activatedAt: Date(),
             supersededAt: nil,
-            activityLevel: nil
+            activityLevel: activityLevel
         )
 
         Task {

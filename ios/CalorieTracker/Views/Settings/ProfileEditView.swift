@@ -5,7 +5,6 @@ struct ProfileEditView: View {
 
     @State private var displayName: String = ""
     @State private var selectedSex: String = "prefer_not"
-    @State private var activityLevel: String = "sedentary"
     @State private var timezoneString: String = "America/Los_Angeles"
 
     // Height
@@ -44,14 +43,6 @@ struct ProfileEditView: View {
                     Text("Male").tag("male")
                     Text("Female").tag("female")
                     Text("Prefer Not").tag("prefer_not")
-                }
-
-                Picker("Activity Level", selection: $activityLevel) {
-                    Text("Sedentary").tag("sedentary")
-                    Text("Light").tag("light")
-                    Text("Moderate").tag("moderate")
-                    Text("Active").tag("active")
-                    Text("Very Active").tag("very_active")
                 }
 
                 TextField("Timezone", text: $timezoneString)
@@ -127,7 +118,6 @@ struct ProfileEditView: View {
 
         displayName = profile.displayName ?? ""
         selectedSex = profile.sex ?? "prefer_not"
-        activityLevel = profile.activityLevel ?? "sedentary"
         timezoneString = profile.timezone ?? "America/Los_Angeles"
         heightUnit = profile.unitsHeight ?? "ft"
         birthYearString = profile.birthYear.map { String($0) } ?? ""
@@ -178,7 +168,7 @@ struct ProfileEditView: View {
             unitsHeight: current?.unitsHeight ?? "ft",
             unitsVolume: current?.unitsVolume ?? "ml",
             waterGoalMl: current?.waterGoalMl ?? 2000,
-            activityLevel: activityLevel,
+            activityLevel: current?.activityLevel,
             timezone: timezoneString,
             createdAt: current?.createdAt
         )
