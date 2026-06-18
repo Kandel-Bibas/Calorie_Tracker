@@ -15,9 +15,10 @@ struct LoginView: View {
             VStack(spacing: 24) {
                 Spacer()
                 
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(.orange)
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
                 
                 VStack(spacing: 8) {
                     Text("Calorie Tracker")
@@ -61,7 +62,7 @@ struct LoginView: View {
                                 Spacer()
                             }
                             .padding()
-                            .background(email.isEmpty ? Color.gray : Color.orange)
+                            .background(email.isEmpty ? Color.gray : Color("BrandOrange"))
                             .foregroundStyle(.white)
                             .fontWeight(.semibold)
                             .cornerRadius(10)
@@ -103,7 +104,7 @@ struct LoginView: View {
                                 Spacer()
                             }
                             .padding()
-                            .background(verificationCode.isEmpty ? Color.gray : Color.orange)
+                            .background(verificationCode.isEmpty ? Color.gray : Color("BrandOrange"))
                             .foregroundStyle(.white)
                             .fontWeight(.semibold)
                             .cornerRadius(10)
@@ -119,7 +120,7 @@ struct LoginView: View {
                         } label: {
                             Text("Change Email")
                                 .font(.subheadline)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Color("BrandOrange"))
                         }
                         .padding(.top, 8)
                     }
