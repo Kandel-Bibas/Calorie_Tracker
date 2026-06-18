@@ -347,7 +347,7 @@ struct LogView: View {
             id: mealId,
             userId: userId,
             consumedAt: Date(),
-            mealType: "lunch",
+            mealType: mealLabel.isEmpty ? nil : mealLabel,
             photoPath: nil,
             voiceTranscript: nil,
             totalKcal: totalKcal,
