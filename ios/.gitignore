@@ -1,0 +1,17 @@
+# Xcode project is generated from project.yml by xcodegen — do not track it.
+CalorieTracker.xcodeproj/
+
+# Build output and derived data
+build/
+DerivedData/
+
+# SwiftPM
+.swiftpm/
+.build/
+
+# Xcode per-user state
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store

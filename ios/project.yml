@@ -1,0 +1,45 @@
+name: CalorieTracker
+options:
+  bundleIdPrefix: com.bibas
+packages:
+  supabase-swift:
+    url: https://github.com/supabase-community/supabase-swift
+    version: 2.22.0
+targets:
+  CalorieTracker:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources: [CalorieTracker]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bibas.CalorieTracker
+        INFOPLIST_FILE: CalorieTracker/Info.plist
+      configs:
+        # Debug runs on the Simulator against the local Next.js dev server
+        # (the Simulator shares the Mac's loopback).
+        Debug:
+          API_BASE_URL: http://localhost:3000
+        # Release (and physical-device builds you ship/TestFlight) hit the
+        # public custom domain over HTTPS. Custom domains are exempt from
+        # Vercel Deployment Protection, so this stays reachable while the raw
+        # *.vercel.app deployment URLs remain protected.
+        Release:
+          API_BASE_URL: https://calorie-tracker.bibas.dev
+    dependencies:
+      - package: supabase-swift
+        product: Supabase
+    # Emit a shared scheme so headless/CI builds resolve `-scheme CalorieTracker`
+    # (otherwise the scheme only exists after a first open in Xcode's GUI).
+    scheme:
+      testTargets:
+        - CalorieTrackerTests
+  CalorieTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources: [CalorieTrackerTests]
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: CalorieTracker
