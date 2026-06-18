@@ -15,15 +15,16 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bibas.CalorieTracker
         INFOPLIST_FILE: CalorieTracker/Info.plist
+        # Signing — baked in so `xcodegen generate` never resets Team to "None".
+        DEVELOPMENT_TEAM: LXPCG9K73H
+        CODE_SIGN_STYLE: Automatic
       configs:
-        # Debug runs on the Simulator against the local Next.js dev server
-        # (the Simulator shares the Mac's loopback).
+        # Both configs hit the public custom domain over HTTPS, so Debug builds
+        # work on a physical device without running a local server or switching
+        # to Release. Custom domains are exempt from Vercel Deployment Protection,
+        # so this stays reachable while the raw *.vercel.app URLs remain protected.
         Debug:
-          API_BASE_URL: http://localhost:3000
-        # Release (and physical-device builds you ship/TestFlight) hit the
-        # public custom domain over HTTPS. Custom domains are exempt from
-        # Vercel Deployment Protection, so this stays reachable while the raw
-        # *.vercel.app deployment URLs remain protected.
+          API_BASE_URL: https://calorie-tracker.bibas.dev
         Release:
           API_BASE_URL: https://calorie-tracker.bibas.dev
     dependencies:

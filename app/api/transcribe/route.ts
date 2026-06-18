@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -13,11 +13,8 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request): Promise<Response> {
   try {
-    // Auth check — only signed-in users can transcribe.
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Auth check — only signed-in users can transcribe (cookie or Bearer token).
+    const user = await getRequestUser(req);
     if (!user) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }

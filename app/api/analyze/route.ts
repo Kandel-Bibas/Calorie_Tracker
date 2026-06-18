@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, gte, lt } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/server";
 import { aiCalls, foodCache, mealDrafts, profiles } from "@/db/schema";
 import { uploadMealPhoto } from "@/lib/storage";
 import { analyzeMeal } from "@/lib/gemini";
@@ -92,10 +92,7 @@ interface DraftData {
  * the `saveMeal` Server Action.
  */
 export async function POST(req: Request): Promise<Response> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser(req);
   if (!user) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }

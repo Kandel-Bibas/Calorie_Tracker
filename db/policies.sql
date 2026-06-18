@@ -84,6 +84,31 @@ CREATE POLICY "anyone reads food cache"
   USING (true);
 -- No INSERT/UPDATE/DELETE policy → only service role (which bypasses RLS) can write.
 
+-- =================== ROLE GRANTS ===================
+-- PostgREST connects as the `authenticated` / `anon` role. RLS scopes ROWS, but
+-- table-level privileges must still be granted to the role — Drizzle migrations
+-- (`db:push`) do NOT issue Supabase's usual grants, so without these every
+-- PostgREST request from a client (e.g. the native iOS app) fails with
+-- `42501 permission denied for table ...`. RLS (enabled above) keeps each user
+-- restricted to their own rows; `authenticated` is not the table owner, so RLS
+-- is enforced for it.
+
+GRANT USAGE ON SCHEMA public TO authenticated, anon;
+
+-- User-owned tables: full DML, rows restricted to the owner by the policies above.
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  profiles, goals, meals, meal_items, weights, water_logs, streaks,
+  user_food_overrides, meal_drafts, ai_calls
+  TO authenticated;
+
+-- Shared read-only cache (writes still blocked: no INSERT/UPDATE/DELETE policy).
+GRANT SELECT ON food_cache TO authenticated, anon;
+
+-- Tables created later in this schema inherit the same grants (run as the same
+-- role used by migrations).
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+
 -- =================== STORAGE: meals bucket ===================
 -- Run these once after creating the 'meals' bucket in Supabase Storage.
 

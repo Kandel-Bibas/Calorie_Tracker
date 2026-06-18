@@ -38,6 +38,37 @@ export async function createClient() {
 }
 
 /**
+ * Resolve the authenticated user for a route handler, supporting two clients:
+ *   1. Browser (web app) — session carried in auth cookies (tried first).
+ *   2. Native app — Supabase access token in an `Authorization: Bearer <jwt>`
+ *      header. The JWT is validated server-side via `getUser(token)` (a network
+ *      call to Supabase Auth), not merely decoded.
+ *
+ * Returns the user, or null when neither path authenticates. Additive: the
+ * existing cookie flow is unchanged, so web behavior is unaffected.
+ */
+export async function getRequestUser(request: Request) {
+  const supabase = await createClient();
+
+  // 1. Cookie-based session (web).
+  const {
+    data: { user: cookieUser },
+  } = await supabase.auth.getUser();
+  if (cookieUser) return cookieUser;
+
+  // 2. Bearer token (native clients).
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.slice("Bearer ".length).trim();
+  if (!token) return null;
+
+  const {
+    data: { user: tokenUser },
+  } = await supabase.auth.getUser(token);
+  return tokenUser ?? null;
+}
+
+/**
  * Service-role client. ONLY for trusted server-side use — bypasses RLS.
  * Use sparingly (cache writes, admin operations).
  */
