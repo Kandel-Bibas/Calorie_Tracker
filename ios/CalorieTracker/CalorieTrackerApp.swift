@@ -4,15 +4,17 @@ import Supabase
 @Observable
 class AppState {
     let supabaseManager: SupabaseManager
+    let healthKit: HealthKitManaging
     var isLoggedIn: Bool = false
     var isLoading: Bool = true
-    
+
     init() {
         let client = SupabaseClient(
             supabaseURL: Config.supabaseURL,
             supabaseKey: Config.supabaseAnonKey
         )
         self.supabaseManager = SupabaseManager(supabase: client)
+        self.healthKit = HealthKitManager()
     }
     
     func checkAuth() async {

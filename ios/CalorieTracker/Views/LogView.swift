@@ -194,7 +194,7 @@ struct LogView: View {
                             .padding()
                             .background(Color.red.opacity(0.1))
                             .foregroundStyle(.red)
-                            .cornerRadius(10)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .onAppear {
                             isPulsing = true
@@ -209,7 +209,7 @@ struct LogView: View {
                             .padding()
                             .background(Color.green.opacity(0.1))
                             .foregroundStyle(.green)
-                            .cornerRadius(10)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                             
                             Button(role: .destructive) {
                                 self.voiceData = nil
@@ -220,7 +220,7 @@ struct LogView: View {
                                     .foregroundStyle(.red)
                                     .padding()
                                     .background(Color(.systemGray6))
-                                    .cornerRadius(10)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                         }
                     } else {
@@ -236,7 +236,7 @@ struct LogView: View {
                             .padding()
                             .background(Color(.systemGray6))
                             .foregroundStyle(.primary)
-                            .cornerRadius(10)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                     }
                     
@@ -387,6 +387,8 @@ struct LogView: View {
         Task {
             do {
                 try await appState.supabaseManager.insertMeal(meal: meal, items: mealItems)
+                await appState.healthKit.writeMeal(kcal: totalKcal, proteinG: totalProtein,
+                                                   carbG: totalCarb, fatG: totalFat, date: meal.consumedAt)
                 await MainActor.run {
                     dismiss()
                 }

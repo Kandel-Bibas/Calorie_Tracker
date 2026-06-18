@@ -65,5 +65,9 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Calorie Tracker reads your active energy, steps, and weight to show your daily summary and net calories.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Calorie Tracker saves the meals, water, and weight you log into Apple Health.</string>
 </dict>
 </plist>

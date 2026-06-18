@@ -115,7 +115,7 @@ struct MealReviewView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(.systemGray6))
-                        .cornerRadius(10)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(Color.orange, lineWidth: 1)
@@ -131,7 +131,7 @@ struct MealReviewView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.orange)
-                        .cornerRadius(10)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .disabled(items.isEmpty)
             }

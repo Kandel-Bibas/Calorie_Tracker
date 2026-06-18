@@ -43,7 +43,7 @@ struct LoginView: View {
                                 .textInputAutocapitalization(.never)
                                 .padding()
                                 .background(Color(.systemGray6))
-                                .cornerRadius(10)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         
                         Button {
@@ -64,7 +64,7 @@ struct LoginView: View {
                             .background(email.isEmpty ? Color.gray : Color.orange)
                             .foregroundStyle(.white)
                             .fontWeight(.semibold)
-                            .cornerRadius(10)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .disabled(email.isEmpty || isSendingCode)
                         
@@ -85,7 +85,7 @@ struct LoginView: View {
                                 .keyboardType(.numberPad)
                                 .padding()
                                 .background(Color(.systemGray6))
-                                .cornerRadius(10)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         
                         Button {
@@ -106,7 +106,7 @@ struct LoginView: View {
                             .background(verificationCode.isEmpty ? Color.gray : Color.orange)
                             .foregroundStyle(.white)
                             .fontWeight(.semibold)
-                            .cornerRadius(10)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .disabled(verificationCode.isEmpty || isVerifyingCode)
                         
@@ -135,7 +135,7 @@ struct LoginView: View {
                 }
                 .padding()
                 .background(Color(.systemBackground))
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color(.systemGray5), lineWidth: 1)

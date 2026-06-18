@@ -18,6 +18,7 @@ targets:
         # Signing — baked in so `xcodegen generate` never resets Team to "None".
         DEVELOPMENT_TEAM: LXPCG9K73H
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: CalorieTracker/CalorieTracker.entitlements
       configs:
         # Both configs hit the public custom domain over HTTPS, so Debug builds
         # work on a physical device without running a local server or switching
